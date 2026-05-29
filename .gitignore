@@ -6,3 +6,11 @@ __pycache__/
 *.sqlite
 .pytest_cache/
 out/
+
+# Internal: process/context recordings + AI-workflow tooling — not part of the functional deliverable
+docs/
+.claude/
+AI_HANDOFF.md
+RESUME_PROMPT.md
+*.egg-info/
+Forward Deployed Engineer (FDE) - Tech Case Study.pdf

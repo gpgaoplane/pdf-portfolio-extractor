@@ -57,9 +57,16 @@ def make_client():
 def extract_with_llm(page_texts: list[str]) -> LLMExtraction:
     client = make_client()
     joined = "\n\n".join(f"[page {i}]\n{t}" for i, t in enumerate(page_texts, 1))
+    kwargs = {}
+    # DashScope hybrid-thinking models (Qwen3, DeepSeek) reject tool_choice=required while in
+    # thinking mode, so structured extraction needs thinking off. Env-gated to stay provider-
+    # agnostic: only sent when LLM_ENABLE_THINKING is explicitly false-y.
+    if os.environ.get("LLM_ENABLE_THINKING", "").strip().lower() in ("false", "0", "no", "off"):
+        kwargs["extra_body"] = {"enable_thinking": False}
     return client.chat.completions.create(
         model=os.environ.get("LLM_MODEL", "deepseek-v4-flash"), response_model=LLMExtraction,
-        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": joined}])
+        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": joined}],
+        **kwargs)
 
 def build_records_from_llm(out: LLMExtraction, source_file: str,
                            unit_hint: str | None = None) -> list[ExtractionRecord]:

@@ -14,6 +14,8 @@ def run(pdf_paths: list[str], db_path: Path | str = "out/portfolio.db") -> int:
     return total
 
 def main() -> None:
+    from dotenv import load_dotenv
+    load_dotenv()  # the one-command CLI loads provider config (LLM_*) from .env
     args = sys.argv[1:]
     if not args:
         print("usage: portfolio-extract <pdf> [<pdf> ...]"); raise SystemExit(2)

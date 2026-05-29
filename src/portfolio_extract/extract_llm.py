@@ -10,6 +10,18 @@ from portfolio_extract.scale import to_canonical, ScaleContext
 
 PROMPT_VERSION = "thin-slice-v1"
 
+_CURRENCY_ALIASES = {
+    "USD": Currency.USD, "$": Currency.USD, "US$": Currency.USD, "USD$": Currency.USD,
+    "GBP": Currency.GBP, "£": Currency.GBP,
+    "EUR": Currency.EUR, "€": Currency.EUR,
+}
+
+def _coerce_currency(raw: str | None) -> Currency:
+    """Map an LLM-returned currency string to the Currency enum; default USD if unrecognized.
+    (Plan 2: surface/flag unrecognized currencies instead of silently defaulting.)"""
+    t = (raw or "").strip().upper()
+    return _CURRENCY_ALIASES.get(t, Currency.USD)
+
 class LLMMetric(BaseModel):
     metric: str
     raw_text: str
@@ -56,7 +68,7 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
         value = to_canonical(parse_number(m.raw_text), METRIC_UNIT[metric], ctx)
         records.append(ExtractionRecord(
             company=out.company_name, period_year=out.period_year, period_quarter=out.period_quarter,
-            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=Currency(out.currency),
+            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=_coerce_currency(out.currency),
             raw_text=m.raw_text, label_as_reported=m.label_as_reported, source_file=source_file,
             source_page=m.source_page, source_snippet=m.source_snippet,
             extraction_method=ExtractionMethod.LLM_PROSE, confidence_tier=ConfidenceTier.LOW,

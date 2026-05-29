@@ -15,3 +15,24 @@ def test_build_records_maps_universal_core():
     assert by[MetricName.GROSS_MARGIN].value == 78.0
     assert by[MetricName.HEADCOUNT].value == 142.0
     assert by[MetricName.HEADCOUNT].label_as_reported == "FTE"
+
+import pytest
+from portfolio_extract.extract_llm import _coerce_currency
+from portfolio_extract.models import Currency
+
+@pytest.mark.parametrize("raw, expected", [
+    ("USD", Currency.USD),
+    ("usd", Currency.USD),
+    ("GBP ", Currency.GBP),      # trailing space
+    (" gbp", Currency.GBP),
+    ("£", Currency.GBP),
+    ("$", Currency.USD),
+    ("US$", Currency.USD),
+    ("€", Currency.EUR),
+    ("EUR", Currency.EUR),
+    ("BTC", Currency.USD),        # unknown -> default USD
+    ("", Currency.USD),
+    (None, Currency.USD),
+])
+def test_coerce_currency(raw, expected):
+    assert _coerce_currency(raw) == expected

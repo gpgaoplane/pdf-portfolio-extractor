@@ -44,16 +44,21 @@ _SYSTEM = (
     "variants (FTE->headcount; Recognized/Quarterly/Net/Platform/Gross Transaction Revenue->"
     "revenue_quarterly). Never invent a value not in the text.")
 
+_MODES = {"JSON": instructor.Mode.JSON, "TOOLS": instructor.Mode.TOOLS}
+
 def make_client():
+    # Structured-output mode is env-configurable so a provider that rejects JSON mode
+    # (some DeepSeek/reasoning models) can switch to tool-calling without a code change.
+    mode = _MODES.get(os.environ.get("LLM_MODE", "JSON").upper(), instructor.Mode.JSON)
     return instructor.from_openai(
         OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"]),
-        mode=instructor.Mode.JSON)
+        mode=mode)
 
 def extract_with_llm(page_texts: list[str]) -> LLMExtraction:
     client = make_client()
     joined = "\n\n".join(f"[page {i}]\n{t}" for i, t in enumerate(page_texts, 1))
     return client.chat.completions.create(
-        model=os.environ.get("LLM_MODEL", "qwen-plus"), response_model=LLMExtraction,
+        model=os.environ.get("LLM_MODEL", "deepseek-v4-flash"), response_model=LLMExtraction,
         messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": joined}])
 
 def build_records_from_llm(out: LLMExtraction, source_file: str,

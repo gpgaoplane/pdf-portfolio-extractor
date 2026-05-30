@@ -1,0 +1,189 @@
+# Ground-truth labels for the extraction eval (Plan 2b).
+#
+# Transcribed by hand from the source PDFs, independent of any extractor output, so the eval
+# does not grade itself. Values are CANONICAL (the form the pipeline normalizes to):
+#   revenue_quarterly / arr / cash_balance / net_burn_monthly / ebitda  -> USD millions
+#   gross_margin / net_revenue_retention / gross_revenue_retention / logo_churn -> percent
+#   headcount -> count
+# Currency is the native reporting currency (values are NOT FX-converted).
+#
+# status:
+#   present         - reported in this document; `value` is the canonical figure
+#   null_in_source  - the metric could apply to this company but is not reported here
+#   not_applicable  - the metric is meaningless for this business model (e.g. ARR for a lender)
+#
+# Notes capture basis/ambiguity for the human reviewer; they are intentionally free text, not
+# enum strings, so this file does not churn when the record schema firms up in 2c/2d.
+
+NovaCloud_Q2_2025:
+  company: NovaCloud
+  sector: SaaS
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 8.4,  label_as_reported: "Recognized Revenue (USD)", page: 1, status: present}
+    arr:                     {value: 34.2, label_as_reported: "ARR (End of Period)", page: 1, status: present}
+    gross_margin:            {value: 78.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "SaaS COGS basis"}
+    net_revenue_retention:   {value: 123.0, label_as_reported: "Net Dollar Retention", page: 1, status: present, note: "LTM; footnote says equivalent to NRR"}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {value: 5.8,  label_as_reported: "Logo Churn (LTM)", page: 1, status: present}
+    cash_balance:            {value: 19.6, label_as_reported: "Cash Balance", page: 1, status: present}
+    net_burn_monthly:        {value: 0.75, label_as_reported: "Monthly Net Burn", page: 1, status: present, note: "shown as ($0.75M), an outflow; excludes non-cash SBC of $0.38M"}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 142,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+LendBridge_Q1_2025:
+  company: LendBridge
+  sector: Lending
+  period: {year: 2025, quarter: Q1}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 12.1, label_as_reported: "Recognized Revenue", page: 1, status: present, note: "lending: interest income + fees"}
+    arr:                     {status: not_applicable, note: "lending business model"}
+    gross_margin:            {value: 61.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "net-interest-spread basis, NOT a SaaS gross margin; do not compare cross-sector. Separate 'Net Interest Margin 9.3%' is a distinct NIM metric, out of core set"}
+    net_revenue_retention:   {status: not_applicable, note: "lending business model"}
+    gross_revenue_retention: {status: not_applicable, note: "lending business model"}
+    logo_churn:              {status: not_applicable, note: "lending business model"}
+    cash_balance:            {status: null_in_source, note: "Total Loan Book $302M is a balance-sheet asset, NOT operating cash"}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 182,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+ApexFreight_Q2_2025:
+  company: ApexFreight
+  sector: Marketplace
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  predecessor: "FleetLink Logistics Network (rebrand effective 2025-04-01)"
+  metrics:
+    revenue_quarterly:       {value: 9.3,  label_as_reported: "Total Recognized Revenue", page: 1, status: present, note: "composite: transaction 8.6 + SaaS tool fee 0.7; TOTAL wins per revenue precedence"}
+    arr:                     {status: null_in_source, note: "marketplace-primary with SaaS tool fees; ARR not disclosed (not pure-marketplace, so not asserted not_applicable)"}
+    gross_margin:            {value: 54.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "marketplace contribution basis; rebrand costs included, not excluded"}
+    net_revenue_retention:   {status: null_in_source}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {status: null_in_source}
+    cash_balance:            {status: null_in_source}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source, note: "D&A 0.9M and warehouse exit 0.6M disclosed, but no EBITDA line"}
+    headcount:               {value: 204,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+NovaCloud_Q1_2025:
+  company: NovaCloud
+  sector: SaaS
+  period: {year: 2025, quarter: Q1}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 7.9,  label_as_reported: "Recognized Revenue (USD)", page: 1, status: present}
+    arr:                     {value: 31.6, label_as_reported: "End-of-Period ARR", page: 1, status: present}
+    gross_margin:            {value: 77.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "SaaS COGS basis"}
+    net_revenue_retention:   {value: 121.0, label_as_reported: "NRR (LTM)", page: 1, status: present, note: "footnote: equivalent to Net Dollar Retention in prior periods"}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {value: 6.1,  label_as_reported: "Logo Churn (LTM)", page: 1, status: present}
+    cash_balance:            {value: 21.3, label_as_reported: "Cash Balance", page: 1, status: present}
+    net_burn_monthly:        {value: 0.82, label_as_reported: "Monthly Net Burn", page: 1, status: present, note: "shown as ($0.82M), an outflow"}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 135,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+LendBridge_Q2_2025:
+  company: LendBridge
+  sector: Lending
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 12.7, label_as_reported: "Recognized Revenue", page: 1, status: present, note: "lending: interest income + fees"}
+    arr:                     {status: not_applicable, note: "lending business model"}
+    gross_margin:            {value: 62.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "net-interest-spread basis (footnote: interest income net of cost of funds); distinct 'Net Interest Margin 9.4%' and 'Pre-Provision Operating Margin 34%' are out of core set"}
+    net_revenue_retention:   {status: not_applicable, note: "lending business model"}
+    gross_revenue_retention: {status: not_applicable, note: "lending business model"}
+    logo_churn:              {status: not_applicable, note: "lending business model"}
+    cash_balance:            {status: null_in_source, note: "Total Loan Book $316M is a balance-sheet asset, NOT operating cash"}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source, note: "reports EPS $0.11 but no EBITDA line"}
+    headcount:               {value: 188,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+MediSight_Q2_2025:
+  company: MediSight
+  sector: SaaS
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 6.8,  label_as_reported: "Recognized Revenue", page: 1, status: present}
+    arr:                     {value: 27.9, label_as_reported: "Contracted ARR (end of period)", page: 1, status: present, note: "contracted basis (signed active contracts)"}
+    gross_margin:            {value: 77.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "SaaS basis; footnote excludes implementation and customer-success costs"}
+    net_revenue_retention:   {status: null_in_source, note: "not reported as a number; 'no material customer churn' stated qualitatively. ARR Growth YoY 31% and Expansion ARR % 87% are derived, out of core set"}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {status: null_in_source, note: "churn described qualitatively ('no material customer churn'), not a figure"}
+    cash_balance:            {status: null_in_source}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 121,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+PeopleFlow_Q2_2025:
+  company: PeopleFlow
+  sector: SaaS
+  period: {year: 2025, quarter: Q2}
+  currency: GBP
+  metrics:
+    revenue_quarterly:       {value: 5.1,  label_as_reported: "Quarterly Revenue", page: 1, status: present, note: "GBP, not converted. Q1 2025 was restated 4.7M->4.6M (footnote 2); reconciliation is a 2e view-layer concern"}
+    arr:                     {value: 21.4, label_as_reported: "Subscription ARR (end of period)", page: 1, status: present, note: "GBP"}
+    gross_margin:            {value: 73.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "stated in commentary prose (73%), NOT tabled (footnote 3); a prose-extraction case"}
+    net_revenue_retention:   {value: 118.0, label_as_reported: "Net Dollar Retention (LTM)", page: 1, status: present, note: "computed in GBP; label maintained for cross-portfolio comparability (footnote 4)"}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {value: 4.2,  label_as_reported: "Annual Logo Churn", page: 1, status: present}
+    cash_balance:            {status: null_in_source}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 96,   label_as_reported: "Total Headcount", page: 1, status: present}
+
+TalentVault_Q2_2025:
+  company: TalentVault
+  sector: SaaS
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 5.5,  label_as_reported: "Quarterly Revenue (recognized)", page: 1, status: present, note: "table also shows Q1 2025 column (5.1); labelling the Q2 figure"}
+    arr:                     {value: 22.4, label_as_reported: "Contracted ARR", page: 1, status: present, note: "contracted basis; includes multi-year deals at full annualized value"}
+    gross_margin:            {value: 76.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "SaaS basis"}
+    net_revenue_retention:   {value: 119.0, label_as_reported: "Net Revenue Retention (LTM)", page: 1, status: present, note: "includes upsell/cross-sell"}
+    gross_revenue_retention: {value: 91.0, label_as_reported: "Gross Revenue Retention (LTM)", page: 1, status: present, note: "excludes expansion; the GRR<NRR spread is the expansion contribution. Never merge with NRR"}
+    logo_churn:              {status: null_in_source, note: "reports GRR/NRR but no logo-churn count"}
+    cash_balance:            {value: 17.9, label_as_reported: "Cash Balance", page: 1, status: present}
+    net_burn_monthly:        {value: 0.68, label_as_reported: "Monthly Net Burn", page: 1, status: present, note: "shown as ($0.68M), an outflow; excludes non-cash SBC"}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 103,  label_as_reported: "Total Headcount", page: 1, status: present}
+
+FleetLink_Q1_2025:
+  company: FleetLink
+  sector: Marketplace
+  period: {year: 2025, quarter: Q1}
+  currency: USD
+  successor: "ApexFreight (rebrand effective 2025-04-01); FleetLink Q1 and ApexFreight Q2 are the same operating business"
+  metrics:
+    revenue_quarterly:       {value: 8.9,  label_as_reported: "Gross Transaction Revenue", page: 1, status: present, note: "marketplace net fees (all fees on completed shipments); maps to revenue. NOT to be confused with Gross Transaction VALUE/GMV, which we never map"}
+    arr:                     {status: not_applicable, note: "pure transaction marketplace (no SaaS component)"}
+    gross_margin:            {value: 52.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "marketplace contribution basis"}
+    net_revenue_retention:   {status: null_in_source, note: "REVIEW: spec applicability rule gates only ARR for marketplace, so NRR is null_in_source here; arguably should be not_applicable for a pure transaction marketplace. Candidate glossary refinement"}
+    gross_revenue_retention: {status: null_in_source, note: "see net_revenue_retention review note"}
+    logo_churn:              {status: null_in_source, note: "see net_revenue_retention review note"}
+    cash_balance:            {status: null_in_source}
+    net_burn_monthly:        {status: null_in_source}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 199,  label_as_reported: "Headcount (commentary)", page: 1, status: present, note: "PROSE ONLY: '199 employees', footnote says not tabled this quarter. Prose-extraction case"}
+
+CarbonTrack_Q2_2025:
+  company: CarbonTrack
+  sector: SaaS
+  period: {year: 2025, quarter: Q2}
+  currency: USD
+  metrics:
+    revenue_quarterly:       {value: 4.1,  label_as_reported: "Recognized Revenue", page: 1, status: present, note: "table also shows Q1 2025 column (3.8)"}
+    arr:                     {value: 16.9, label_as_reported: "Contracted ARR", page: 1, status: present, note: "contracted; footnote excludes one-time integration fees and professional services"}
+    gross_margin:            {value: 73.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "SaaS basis; footnote excludes customer-success and data-science costs"}
+    net_revenue_retention:   {value: 121.0, label_as_reported: "Net Revenue Retention (LTM)", page: 1, status: present}
+    gross_revenue_retention: {status: null_in_source}
+    logo_churn:              {value: 3.8,  label_as_reported: "Logo Churn (LTM)", page: 1, status: present}
+    cash_balance:            {value: 13.8, label_as_reported: "Cash Balance", page: 1, status: present}
+    net_burn_monthly:        {value: 0.55, label_as_reported: "Monthly Net Burn", page: 1, status: present, note: "shown as ($0.55M), an outflow"}
+    ebitda:                  {status: null_in_source}
+    headcount:               {value: 78,   label_as_reported: "Total Headcount", page: 1, status: present, note: "'Paying Entities 1,042' is a volume count, never mapped to headcount or revenue"}
+

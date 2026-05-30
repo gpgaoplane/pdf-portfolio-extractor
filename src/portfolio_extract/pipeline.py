@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from portfolio_extract.structural import extract_structure
 from portfolio_extract.extract_llm import extract_with_llm, build_records_from_llm
-from portfolio_extract.verify import verify_value
+from portfolio_extract.verify import verify_value, VerifyResult, MatchQuality
 from portfolio_extract.confidence import score_confidence, MatchLevel
 from portfolio_extract.models import ExtractionRecord, ExtractionMethod, AbsenceReason
 
@@ -36,8 +36,7 @@ def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
     return finalized
 
 
-def _match_level(r, vr, page_text: str) -> MatchLevel:
-    from portfolio_extract.verify import MatchQuality
+def _match_level(r: ExtractionRecord, vr: VerifyResult | None, page_text: str) -> MatchLevel:
     if vr and vr.quality == MatchQuality.EXACT:
         return MatchLevel.EXACT_CELL
     if vr and vr.quality == MatchQuality.ROUNDING:

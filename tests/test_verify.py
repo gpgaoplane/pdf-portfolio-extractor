@@ -50,3 +50,8 @@ def test_exact_vs_rounding_quality():
 def test_no_match_quality_none():
     cells = [Cell("Revenue $8.4M", 1, (0, 0, 1, 1))]
     assert verify_value(9.9, CanonicalUnit.USD_MILLIONS, 1, cells, label="Revenue").quality == MatchQuality.NONE
+
+def test_count_requires_exact_no_rounding():
+    cells = [Cell("Total Headcount 143", 1, (0, 0, 1, 1))]
+    # 142 vs 143 is within 1% but counts must not rounding-match
+    assert verify_value(142.0, CanonicalUnit.COUNT, 1, cells, label="Total Headcount").quality == MatchQuality.NONE

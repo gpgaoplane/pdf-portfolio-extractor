@@ -52,7 +52,7 @@ def _scan(cells: list[Cell], value: float, metric_unit: CanonicalUnit,
         d = _rel_diff(cell_val, value)
         if d <= EXACT_EPS:
             return VerifyResult(MatchQuality.EXACT, c.bbox)
-        if d <= TOLERANCE and best is None:
+        if metric_unit != CanonicalUnit.COUNT and d <= TOLERANCE and best is None:
             best = VerifyResult(MatchQuality.ROUNDING, c.bbox)
     return best or VerifyResult(MatchQuality.NONE, None)
 

@@ -37,6 +37,8 @@ def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
 
 
 def _match_level(r: ExtractionRecord, vr: VerifyResult | None, page_text: str) -> MatchLevel:
+    if r.value is None:
+        return MatchLevel.ABSENT
     if vr and vr.quality == MatchQuality.EXACT:
         return MatchLevel.EXACT_CELL
     if vr and vr.quality == MatchQuality.ROUNDING:

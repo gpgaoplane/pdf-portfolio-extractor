@@ -14,3 +14,12 @@ def test_pipeline_assembles_records(monkeypatch, data_dir):
     assert gm.source_file == "NovaCloud_Q2_2025.pdf"
     assert gm.source_page == 1 and gm.source_snippet
     assert gm.confidence_tier in {ConfidenceTier.HIGH, ConfidenceTier.MEDIUM}
+
+from types import SimpleNamespace
+from portfolio_extract.pipeline import _match_level
+from portfolio_extract.confidence import MatchLevel
+
+def test_match_level_absent_when_value_is_none():
+    # a metric the LLM returned but whose raw_text isn't numeric -> value None
+    r = SimpleNamespace(value=None, raw_text="N/A", source_snippet="Headcount N/A")
+    assert _match_level(r, None, "Headcount N/A") == MatchLevel.ABSENT

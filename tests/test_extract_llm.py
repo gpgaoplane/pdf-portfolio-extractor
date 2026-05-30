@@ -39,6 +39,19 @@ def test_unrecognized_currency_is_flagged_not_silent():
     assert rec.currency == Currency.USD            # still defaults so the record is usable
     assert rec.notes and "BTC" in rec.notes        # but the problem is surfaced
 
+def test_llm_extraction_predecessor_fields_default_none():
+    out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025,
+                        period_quarter="Q2", currency="USD", metrics=[])
+    assert out.predecessor_name is None and out.predecessor_effective_date is None
+
+def test_llm_extraction_accepts_predecessor():
+    out = LLMExtraction(company_name="Apex Freight Solutions Inc.", sector="Marketplace",
+        period_year=2025, period_quarter="Q2", currency="USD",
+        predecessor_name="FleetLink Logistics Network", predecessor_effective_date="2025-04-01",
+        metrics=[])
+    assert out.predecessor_name == "FleetLink Logistics Network"
+    assert out.predecessor_effective_date == "2025-04-01"
+
 def test_recognized_currency_sets_no_flag():
     out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025,
         period_quarter="Q2", currency="GBP", metrics=[

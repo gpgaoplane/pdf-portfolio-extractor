@@ -38,6 +38,8 @@ class LLMExtraction(BaseModel):
     period_year: int
     period_quarter: str
     currency: str
+    predecessor_name: str | None = None
+    predecessor_effective_date: str | None = None
     metrics: list[LLMMetric]
 
 _SYSTEM = (
@@ -45,7 +47,10 @@ _SYSTEM = (
     "gross_margin, headcount. Use canonical names. For each, give the value EXACTLY as printed "
     "(raw_text), the company's own label, the 1-indexed page, and the surrounding snippet. Map "
     "variants (FTE->headcount; Recognized/Quarterly/Net/Platform/Gross Transaction Revenue->"
-    "revenue_quarterly). Never invent a value not in the text.")
+    "revenue_quarterly). Never invent a value not in the text."
+    " If the report states it is a rebrand of or successor to a prior entity (often in a footnote), "
+    "set predecessor_name to that prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; "
+    "otherwise leave both null.")
 
 _MODES = {"JSON": instructor.Mode.JSON, "TOOLS": instructor.Mode.TOOLS}
 

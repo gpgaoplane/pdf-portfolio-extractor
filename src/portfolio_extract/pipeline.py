@@ -1,12 +1,22 @@
 from __future__ import annotations
+from dataclasses import dataclass
 from pathlib import Path
 from portfolio_extract.structural import extract_structure
 from portfolio_extract.extract_llm import extract_with_llm, build_records_from_llm
 from portfolio_extract.verify import verify_value, VerifyResult, MatchQuality
 from portfolio_extract.confidence import score_confidence, MatchLevel
 from portfolio_extract.models import ExtractionRecord, ExtractionMethod, AbsenceReason
+from portfolio_extract.registry import resolve_identity, CompanyRecord, ReviewItem
 
-def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
+
+@dataclass
+class DocumentExtraction:
+    records: list[ExtractionRecord]
+    company: CompanyRecord
+    review: list[ReviewItem]
+
+
+def extract_pdf(pdf_path: Path | str) -> DocumentExtraction:
     pdf_path = Path(pdf_path)
     pages = extract_structure(pdf_path)
     all_cells = [c for p in pages for c in p.cells]
@@ -15,6 +25,7 @@ def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
     text_by_page = {p.number: p.text for p in pages}
 
     out = extract_with_llm([p.text for p in pages])
+    company, review = resolve_identity(pdf_path.name, out)
     records = build_records_from_llm(out, source_file=pdf_path.name,
                                      hint_by_page=hint_by_page, doc_hint=doc_hint)
 
@@ -31,9 +42,10 @@ def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
             "extraction_method": (ExtractionMethod.TABLE_CELL
                                   if level in (MatchLevel.EXACT_CELL, MatchLevel.ROUNDING_CELL)
                                   else r.extraction_method),
+            "company": company.canonical_name,
             "bbox": vr.bbox if vr else None, "confidence_tier": tier, "confidence_score": score,
             "absence_reason": AbsenceReason.PRESENT if r.value is not None else AbsenceReason.EXPECTED_NOT_FOUND}))
-    return finalized
+    return DocumentExtraction(records=finalized, company=company, review=review)
 
 
 def _match_level(r: ExtractionRecord, vr: VerifyResult | None, page_text: str) -> MatchLevel:

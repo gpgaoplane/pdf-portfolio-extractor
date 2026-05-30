@@ -15,3 +15,16 @@ def test_save_and_query_roundtrip(tmp_path):
     repo.save_many([_rec(8.4)])
     rows = repo.query(company="NovaCloud")
     assert len(rows) == 1 and rows[0].value == 8.4
+
+
+def test_company_upsert_get_list(tmp_path):
+    from portfolio_extract.repository import SqliteRepository
+    from portfolio_extract.registry import CompanyRecord, Predecessor
+    from portfolio_extract.models import Sector
+    repo = SqliteRepository(tmp_path / "c.db"); repo.init_schema()
+    repo.upsert_company(CompanyRecord(canonical_name="ApexFreight", sector=Sector.MARKETPLACE,
+        aliases=["Apex Freight Solutions Inc."], predecessor=Predecessor(name="FleetLink")))
+    got = repo.get_company("ApexFreight")
+    assert got.sector == Sector.MARKETPLACE and got.predecessor.name == "FleetLink"
+    repo.upsert_company(CompanyRecord(canonical_name="NovaCloud", sector=Sector.SAAS))
+    assert {c.canonical_name for c in repo.list_companies()} == {"ApexFreight", "NovaCloud"}

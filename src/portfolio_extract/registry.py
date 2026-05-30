@@ -67,3 +67,44 @@ def resolve_identity(filename: str, out) -> tuple[CompanyRecord, list[ReviewItem
                         predecessor=predecessor,
                         identity_confidence="HIGH" if name_match else "LOW")
     return rec, review
+
+
+class Registry:
+    def __init__(self) -> None:
+        self._by_name: dict[str, CompanyRecord] = {}
+        self.review: list[ReviewItem] = []
+
+    def add(self, rec: CompanyRecord, doc_review: list[ReviewItem]) -> None:
+        self.review.extend(doc_review)
+        existing = self._by_name.get(rec.canonical_name)
+        if existing is None:
+            self._by_name[rec.canonical_name] = rec
+            return
+        for a in rec.aliases:
+            if a not in existing.aliases:
+                existing.aliases.append(a)
+        if rec.predecessor and not existing.predecessor:
+            existing.predecessor = rec.predecessor
+        if rec.sector != existing.sector:
+            self.review.append(ReviewItem(kind="sector_disagreement", canonical_name=rec.canonical_name,
+                detail=f"sector differs across reports: {existing.sector.value} vs {rec.sector.value}"))
+        if rec.identity_confidence == "LOW":
+            existing.identity_confidence = "LOW"
+
+    def finalize(self) -> None:
+        norm_tokens = {_norm(t): t for t in self._by_name}
+        for rec in self._by_name.values():
+            if not rec.predecessor:
+                continue
+            np = _norm(rec.predecessor.name)
+            match = next((canon for ntok, canon in norm_tokens.items()
+                          if ntok and ntok != _norm(rec.canonical_name)
+                          and (np.startswith(ntok) or ntok in np)), None)
+            if match:
+                rec.predecessor.name = match
+            else:
+                self.review.append(ReviewItem(kind="predecessor_unresolved", canonical_name=rec.canonical_name,
+                    detail=f"predecessor '{rec.predecessor.name}' did not match a known company"))
+
+    def companies(self) -> list[CompanyRecord]:
+        return list(self._by_name.values())

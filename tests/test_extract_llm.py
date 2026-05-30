@@ -16,6 +16,16 @@ def test_build_records_maps_universal_core():
     assert by[MetricName.HEADCOUNT].value == 142.0
     assert by[MetricName.HEADCOUNT].label_as_reported == "FTE"
 
+def test_build_records_uses_per_page_hint():
+    # Bare "8400" on page 2, where page 2 is "in thousands" -> 8.4 (millions).
+    out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="USD", metrics=[
+            LLMMetric(metric="revenue_quarterly", raw_text="8400",
+                      label_as_reported="Revenue", source_page=2, source_snippet="Revenue 8400")])
+    recs = build_records_from_llm(out, source_file="X_Q2_2025.pdf",
+                                  hint_by_page={1: None, 2: "in thousands"})
+    assert recs[0].value == 8.4
+
 import pytest
 from portfolio_extract.extract_llm import _coerce_currency
 from portfolio_extract.models import Currency

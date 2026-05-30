@@ -14,11 +14,12 @@ def extract_pdf(pdf_path: Path | str) -> list[ExtractionRecord]:
     doc_hint = next((p.unit_hint for p in pages if p.unit_hint), None)
 
     out = extract_with_llm([p.text for p in pages])
-    records = build_records_from_llm(out, source_file=pdf_path.name, unit_hint=doc_hint)
+    records = build_records_from_llm(out, source_file=pdf_path.name,
+                                     hint_by_page=hint_by_page, doc_hint=doc_hint)
 
     finalized: list[ExtractionRecord] = []
     for r in records:
-        hint = hint_by_page.get(r.source_page, doc_hint)
+        hint = hint_by_page.get(r.source_page) or doc_hint
         vr = (verify_value(r.value, r.canonical_unit, r.source_page, all_cells, unit_hint=hint)
               if r.value is not None else None)
         verified = bool(vr and vr.matched)

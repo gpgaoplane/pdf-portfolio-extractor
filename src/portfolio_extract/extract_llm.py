@@ -69,15 +69,17 @@ def extract_with_llm(page_texts: list[str]) -> LLMExtraction:
         **kwargs)
 
 def build_records_from_llm(out: LLMExtraction, source_file: str,
-                           unit_hint: str | None = None) -> list[ExtractionRecord]:
+                           hint_by_page: dict[int, str | None] | None = None,
+                           doc_hint: str | None = None) -> list[ExtractionRecord]:
     records: list[ExtractionRecord] = []
-    ctx = ScaleContext(unit_hint)
+    hint_by_page = hint_by_page or {}
     for m in out.metrics:
         try:
             metric = MetricName(m.metric)
         except ValueError:
             continue
-        value = to_canonical(parse_number(m.raw_text), METRIC_UNIT[metric], ctx)
+        hint = hint_by_page.get(m.source_page) or doc_hint
+        value = to_canonical(parse_number(m.raw_text), METRIC_UNIT[metric], ScaleContext(hint))
         records.append(ExtractionRecord(
             company=out.company_name, period_year=out.period_year, period_quarter=out.period_quarter,
             metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=_coerce_currency(out.currency),

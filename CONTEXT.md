@@ -1,6 +1,6 @@
 # Portfolio Metrics — Glossary
 
-Canonical metric vocabulary for the portfolio-company reporting extraction. Each company labels metrics its own way; this fixes the canonical term, what it means, which reported labels map to it, and which look-alike labels must NOT. A glossary, not a spec — extraction rules and mechanics live in `docs/DECISIONS.md` and `docs/spec.md` (TBD).
+Canonical metric vocabulary for the portfolio-company reporting extraction. Each company labels metrics its own way; this fixes the canonical term, what it means, which reported labels map to it, and which look-alike labels must NOT. It is a glossary of meaning, not a description of extraction mechanics.
 
 Convention ("normalize-and-disclose"): comparability comes from mapping every company's label to one canonical metric while preserving the company's own label (`label_as_reported`) and the basis it was reported on. Compare on the normalized figure; stay honest by never hiding the basis. Currency is stored native, never converted at extraction.
 
@@ -64,10 +64,10 @@ _Comparability_: within-company-over-time always valid; SaaS↔marketplace cross
 
 ## Flagged ambiguities
 
-- **Gross Margin** — RESOLVED (`docs/DECISIONS.md` D-017): extracted with a machine-readable `basis` enum; lending GM is a net-interest-spread construct (not a true gross margin) and is never compared cross-sector; SaaS↔marketplace comparable with care; within-company-over-time always valid.
-- **Restatement vs rename** — RESOLVED (see `docs/DECISIONS.md` D-016): store each source's as-reported value faithfully (Q1 PDF keeps 4.7M; the Q2 restatement of 4.6M is a separate record); reconcile at the view layer, preferring the latest restated value with an original + restatement flag. Distinct from a label rename across quarters (alias resolution handles those).
-- **Currency** — not all USD (PeopleFlow = GBP, with EUR contracts). Detect and store native; never convert at extraction (see `docs/DECISIONS.md` D5.4).
-- **Revenue precedence & Total Billings** — see the Revenue entry; rule detail in `docs/DECISIONS.md` D-015.
+- **Gross Margin** — extracted with a machine-readable `basis` enum; lending GM is a net-interest-spread construct (not a true gross margin) and is never compared cross-sector; SaaS↔marketplace comparable with care; within-company-over-time always valid.
+- **Restatement vs rename** — store each source's as-reported value faithfully (Q1 PDF keeps 4.7M; the Q2 restatement of 4.6M is a separate record); reconcile at the view layer, preferring the latest restated value with an original + restatement flag. Distinct from a label rename across quarters, which alias resolution handles.
+- **Currency** — not all USD (PeopleFlow = GBP, with EUR contracts). Detect and store native; never convert at extraction.
+- **Revenue precedence & Total Billings** — see the Revenue entry.
 
 ## Example dialogue
 

@@ -30,19 +30,30 @@ import pytest
 from portfolio_extract.extract_llm import _coerce_currency
 from portfolio_extract.models import Currency
 
-@pytest.mark.parametrize("raw, expected", [
-    ("USD", Currency.USD),
-    ("usd", Currency.USD),
-    ("GBP ", Currency.GBP),      # trailing space
-    (" gbp", Currency.GBP),
-    ("£", Currency.GBP),
-    ("$", Currency.USD),
-    ("US$", Currency.USD),
-    ("€", Currency.EUR),
-    ("EUR", Currency.EUR),
-    ("BTC", Currency.USD),        # unknown -> default USD
-    ("", Currency.USD),
-    (None, Currency.USD),
+def test_unrecognized_currency_is_flagged_not_silent():
+    out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="BTC", metrics=[
+            LLMMetric(metric="headcount", raw_text="142", label_as_reported="Headcount",
+                      source_page=1, source_snippet="Headcount 142")])
+    rec = build_records_from_llm(out, source_file="X_Q2_2025.pdf")[0]
+    assert rec.currency == Currency.USD            # still defaults so the record is usable
+    assert rec.notes and "BTC" in rec.notes        # but the problem is surfaced
+
+def test_recognized_currency_sets_no_flag():
+    out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="GBP", metrics=[
+            LLMMetric(metric="headcount", raw_text="142", label_as_reported="Headcount",
+                      source_page=1, source_snippet="Headcount 142")])
+    rec = build_records_from_llm(out, source_file="X_Q2_2025.pdf")[0]
+    assert rec.currency == Currency.GBP and not rec.notes
+
+@pytest.mark.parametrize("raw, expected, recognized", [
+    ("USD", Currency.USD, True), ("usd", Currency.USD, True),
+    ("GBP ", Currency.GBP, True), (" gbp", Currency.GBP, True),
+    ("£", Currency.GBP, True), ("$", Currency.USD, True), ("US$", Currency.USD, True),
+    ("€", Currency.EUR, True), ("EUR", Currency.EUR, True),
+    ("BTC", Currency.USD, False), ("", Currency.USD, False), (None, Currency.USD, False),
 ])
-def test_coerce_currency(raw, expected):
-    assert _coerce_currency(raw) == expected
+def test_coerce_currency(raw, expected, recognized):
+    cur, ok = _coerce_currency(raw)
+    assert cur == expected and ok == recognized

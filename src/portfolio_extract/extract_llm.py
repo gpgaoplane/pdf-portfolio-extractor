@@ -16,11 +16,14 @@ _CURRENCY_ALIASES = {
     "EUR": Currency.EUR, "€": Currency.EUR,
 }
 
-def _coerce_currency(raw: str | None) -> Currency:
-    """Map an LLM-returned currency string to the Currency enum; default USD if unrecognized.
-    (Plan 2: surface/flag unrecognized currencies instead of silently defaulting.)"""
+def _coerce_currency(raw: str | None) -> tuple[Currency, bool]:
+    """Map an LLM-returned currency string to the Currency enum.
+    Returns (currency, recognized); unrecognized strings fall back to USD with recognized=False
+    so the caller can flag rather than silently default."""
     t = (raw or "").strip().upper()
-    return _CURRENCY_ALIASES.get(t, Currency.USD)
+    if t in _CURRENCY_ALIASES:
+        return _CURRENCY_ALIASES[t], True
+    return Currency.USD, False
 
 class LLMMetric(BaseModel):
     metric: str
@@ -73,6 +76,8 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
                            doc_hint: str | None = None) -> list[ExtractionRecord]:
     records: list[ExtractionRecord] = []
     hint_by_page = hint_by_page or {}
+    currency, currency_ok = _coerce_currency(out.currency)
+    currency_note = None if currency_ok else f"unrecognized currency '{out.currency}'; defaulted to USD"
     for m in out.metrics:
         try:
             metric = MetricName(m.metric)
@@ -82,10 +87,10 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
         value = to_canonical(parse_number(m.raw_text), METRIC_UNIT[metric], ScaleContext(hint))
         records.append(ExtractionRecord(
             company=out.company_name, period_year=out.period_year, period_quarter=out.period_quarter,
-            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=_coerce_currency(out.currency),
+            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=currency,
             raw_text=m.raw_text, label_as_reported=m.label_as_reported, source_file=source_file,
             source_page=m.source_page, source_snippet=m.source_snippet,
             extraction_method=ExtractionMethod.LLM_PROSE, confidence_tier=ConfidenceTier.LOW,
             confidence_score=0.0, absence_reason=AbsenceReason.PRESENT,
-            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION))
+            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, notes=currency_note))
     return records

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import instructor
 from openai import OpenAI
 from portfolio_extract.models import (ExtractionRecord, MetricName, METRIC_UNIT, METRIC_PERIOD_BASIS,
-    Currency, ExtractionMethod, ConfidenceTier, AbsenceReason)
+    Currency, ExtractionMethod, ConfidenceTier, AbsenceReason, Component)
 from portfolio_extract.normalize import parse_number
 from portfolio_extract.scale import to_canonical, ScaleContext
 
@@ -40,6 +40,7 @@ class LLMExtraction(BaseModel):
     currency: str
     predecessor_name: str | None = None
     predecessor_effective_date: str | None = None
+    revenue_components: list[Component] | None = None
     metrics: list[LLMMetric]
 
 _SYSTEM = (

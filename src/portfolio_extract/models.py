@@ -90,6 +90,12 @@ METRIC_PERIOD_BASIS: dict[MetricName, PeriodBasis] = {
 }
 
 
+class Component(BaseModel):
+    label: str
+    value: Optional[float]
+    raw_text: str
+
+
 class ExtractionRecord(BaseModel):
     company: str
     period_year: int
@@ -106,8 +112,8 @@ class ExtractionRecord(BaseModel):
     source_snippet: str
     bbox: Optional[tuple[float, float, float, float]] = None
     extraction_method: ExtractionMethod
-    confidence_tier: ConfidenceTier
-    confidence_score: float
+    confidence_tier: Optional[ConfidenceTier] = None
+    confidence_score: Optional[float] = None
     absence_reason: AbsenceReason
     period_basis: PeriodBasis
     extraction_timestamp: Optional[str] = None
@@ -116,3 +122,4 @@ class ExtractionRecord(BaseModel):
     prompt_version: Optional[str] = None
     source_doc_hash: Optional[str] = None
     notes: Optional[str] = None
+    components: Optional[list[Component]] = None

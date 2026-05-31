@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
-from portfolio_extract.models import CanonicalUnit
+from portfolio_extract.models import CanonicalUnit, MetricName
 from portfolio_extract.structural import Cell
 from portfolio_extract.normalize import parse_number
 from portfolio_extract.scale import to_canonical, ScaleContext
@@ -43,13 +43,14 @@ def _rel_diff(a: float, b: float) -> float:
 
 
 def _scan(cells: list[Cell], value: float, metric_unit: CanonicalUnit,
-          ctx: ScaleContext) -> VerifyResult:
+          ctx: ScaleContext, magnitude: bool = False) -> VerifyResult:
     best: Optional[VerifyResult] = None
     for c in cells:
         cell_val = to_canonical(parse_number(c.text), metric_unit, ctx)
         if cell_val is None:
             continue
-        d = _rel_diff(cell_val, value)
+        a, b = (abs(cell_val), abs(value)) if magnitude else (cell_val, value)
+        d = _rel_diff(a, b)
         if d <= EXACT_EPS:
             return VerifyResult(MatchQuality.EXACT, c.bbox)
         if metric_unit != CanonicalUnit.COUNT and d <= TOLERANCE and best is None:
@@ -58,15 +59,17 @@ def _scan(cells: list[Cell], value: float, metric_unit: CanonicalUnit,
 
 
 def verify_value(value: float, metric_unit: CanonicalUnit, page: int, cells: list[Cell],
-                 label: Optional[str] = None, unit_hint: Optional[str] = None) -> VerifyResult:
+                 label: Optional[str] = None, unit_hint: Optional[str] = None,
+                 metric: Optional[MetricName] = None) -> VerifyResult:
     ctx = ScaleContext(unit_hint)
     page_cells = [c for c in cells if c.page == page]
+    magnitude = (metric == MetricName.NET_BURN_MONTHLY)
 
     # Label-aware: prefer cells whose text contains the label.
     if label:
         labelled = [c for c in page_cells if _label_matches(c.text, label)]
-        res = _scan(labelled, value, metric_unit, ctx)
+        res = _scan(labelled, value, metric_unit, ctx, magnitude=magnitude)
         if res.matched:
             return res
     # Fallback: any cell on the page (prose value, or label phrasing not found in a cell).
-    return _scan(page_cells, value, metric_unit, ctx)
+    return _scan(page_cells, value, metric_unit, ctx, magnitude=magnitude)

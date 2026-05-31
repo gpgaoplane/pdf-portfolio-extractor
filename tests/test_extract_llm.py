@@ -60,6 +60,24 @@ def test_recognized_currency_sets_no_flag():
     rec = build_records_from_llm(out, source_file="X_Q2_2025.pdf")[0]
     assert rec.currency == Currency.GBP and not rec.notes
 
+def test_net_burn_stored_as_positive_magnitude():
+    out = LLMExtraction(company_name="X", sector="SaaS", period_year=2025, period_quarter="Q2",
+        currency="USD", metrics=[LLMMetric(metric="net_burn_monthly", raw_text="($0.75M)",
+            label_as_reported="Monthly Net Burn", source_page=1, source_snippet="Monthly Net Burn ($0.75M)")])
+    rec = build_records_from_llm(out, source_file="X.pdf")[0]
+    assert rec.value == 0.75   # magnitude, not -0.75
+
+def test_revenue_components_nested_on_total():
+    from portfolio_extract.models import Component
+    out = LLMExtraction(company_name="ApexFreight", sector="Marketplace", period_year=2025,
+        period_quarter="Q2", currency="USD",
+        revenue_components=[Component(label="transaction", value=8.6, raw_text="8.6M"),
+                            Component(label="SaaS tool fee", value=0.7, raw_text="0.7M")],
+        metrics=[LLMMetric(metric="revenue_quarterly", raw_text="9.3M",
+            label_as_reported="Total Recognized Revenue", source_page=1, source_snippet="Total Recognized Revenue 9.3M")])
+    rec = build_records_from_llm(out, source_file="ApexFreight_Q2_2025.pdf")[0]
+    assert rec.value == 9.3 and len(rec.components) == 2 and rec.components[0].value == 8.6
+
 @pytest.mark.parametrize("raw, expected, recognized", [
     ("USD", Currency.USD, True), ("usd", Currency.USD, True),
     ("GBP ", Currency.GBP, True), (" gbp", Currency.GBP, True),

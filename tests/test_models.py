@@ -19,3 +19,15 @@ def test_absent_value_allowed_null():
         confidence_tier=ConfidenceTier.LOW, confidence_score=0.2,
         absence_reason=AbsenceReason.NOT_APPLICABLE, period_basis=PeriodBasis.POINT_IN_TIME_EOP)
     assert r.value is None and r.absence_reason == AbsenceReason.NOT_APPLICABLE
+
+def test_component_and_optional_confidence():
+    from portfolio_extract.models import ExtractionRecord, Component, MetricName, CanonicalUnit, AbsenceReason, ExtractionMethod, PeriodBasis
+    r = ExtractionRecord(company="X", period_year=2025, period_quarter="Q2",
+        metric=MetricName.REVENUE_QUARTERLY, value=9.3, canonical_unit=CanonicalUnit.USD_MILLIONS,
+        raw_text="9.3M", label_as_reported="Total Recognized Revenue", source_file="f.pdf",
+        source_page=1, source_snippet="x", extraction_method=ExtractionMethod.LLM_PROSE,
+        absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.FLOW_QUARTERLY,
+        components=[Component(label="transaction", value=8.6, raw_text="8.6M"),
+                    Component(label="SaaS tool fee", value=0.7, raw_text="0.7M")])
+    assert r.confidence_tier is None and r.confidence_score is None
+    assert r.components[0].value == 8.6

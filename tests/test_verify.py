@@ -55,3 +55,12 @@ def test_count_requires_exact_no_rounding():
     cells = [Cell("Total Headcount 143", 1, (0, 0, 1, 1))]
     # 142 vs 143 is within 1% but counts must not rounding-match
     assert verify_value(142.0, CanonicalUnit.COUNT, 1, cells, label="Total Headcount").quality == MatchQuality.NONE
+
+
+from portfolio_extract.models import MetricName
+
+def test_net_burn_verifies_on_magnitude():
+    cells = [Cell("Monthly Net Burn ($0.75M)", 1, (0, 0, 1, 1))]
+    r = verify_value(0.75, CanonicalUnit.USD_MILLIONS, 1, cells, label="Monthly Net Burn",
+                     metric=MetricName.NET_BURN_MONTHLY)
+    assert r.matched and r.quality == MatchQuality.EXACT

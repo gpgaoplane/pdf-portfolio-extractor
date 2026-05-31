@@ -51,7 +51,7 @@ LendBridge_Q1_2025:
 
 ApexFreight_Q2_2025:
   company: ApexFreight
-  sector: Marketplace
+  sector: Hybrid
   period: {year: 2025, quarter: Q2}
   currency: USD
   predecessor: "FleetLink Logistics Network (rebrand effective 2025-04-01)"
@@ -160,11 +160,11 @@ FleetLink_Q1_2025:
   successor: "ApexFreight (rebrand effective 2025-04-01); FleetLink Q1 and ApexFreight Q2 are the same operating business"
   metrics:
     revenue_quarterly:       {value: 8.9,  label_as_reported: "Gross Transaction Revenue", page: 1, status: present, note: "marketplace net fees (all fees on completed shipments); maps to revenue. NOT to be confused with Gross Transaction VALUE/GMV, which we never map"}
-    arr:                     {status: not_applicable, note: "pure transaction marketplace (no SaaS component)"}
+    arr:                     {status: not_applicable, note: "pure marketplace: retention family not applicable (no SaaS component)"}
     gross_margin:            {value: 52.0, label_as_reported: "Gross Margin", page: 1, status: present, note: "marketplace contribution basis"}
-    net_revenue_retention:   {status: null_in_source, note: "REVIEW: spec applicability rule gates only ARR for marketplace, so NRR is null_in_source here; arguably should be not_applicable for a pure transaction marketplace. Candidate glossary refinement"}
-    gross_revenue_retention: {status: null_in_source, note: "see net_revenue_retention review note"}
-    logo_churn:              {status: null_in_source, note: "see net_revenue_retention review note"}
+    net_revenue_retention:   {status: not_applicable, note: "pure marketplace: retention family not applicable"}
+    gross_revenue_retention: {status: not_applicable, note: "pure marketplace: retention family not applicable"}
+    logo_churn:              {status: not_applicable, note: "pure marketplace: retention family not applicable"}
     cash_balance:            {status: null_in_source}
     net_burn_monthly:        {status: null_in_source}
     ebitda:                  {status: null_in_source}

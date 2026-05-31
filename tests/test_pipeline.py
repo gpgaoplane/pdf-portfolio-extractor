@@ -16,6 +16,22 @@ def test_pipeline_assembles_records(monkeypatch, data_dir):
     assert gm.company == "NovaCloud"
     assert gm.confidence_tier in {ConfidenceTier.HIGH, ConfidenceTier.MEDIUM}
 
+from portfolio_extract.models import AbsenceReason
+
+def test_pipeline_materializes_absence_and_basis(monkeypatch, data_dir):
+    fake = LLMExtraction(company_name="LendBridge Capital Corp.", sector="Lending", period_year=2025,
+        period_quarter="Q1", currency="USD", metrics=[
+            LLMMetric(metric="gross_margin", raw_text="61%", label_as_reported="Gross Margin",
+                      source_page=1, source_snippet="Gross Margin 61%")])
+    monkeypatch.setattr("portfolio_extract.pipeline.extract_with_llm", lambda texts: fake)
+    de = extract_pdf(data_dir / "LendBridge_Q1_2025.pdf")
+    by = {r.metric: r for r in de.records}
+    gm = by[MetricName.GROSS_MARGIN]
+    assert gm.basis == "net_interest_spread" and gm.absence_reason == AbsenceReason.PRESENT
+    assert by[MetricName.ARR].absence_reason == AbsenceReason.NOT_APPLICABLE   # lending gates ARR
+    assert by[MetricName.ARR].confidence_tier is None                         # not low-confidence
+    assert by[MetricName.CASH_BALANCE].absence_reason == AbsenceReason.NULL_IN_SOURCE
+
 from types import SimpleNamespace
 from portfolio_extract.pipeline import _match_level
 from portfolio_extract.confidence import MatchLevel

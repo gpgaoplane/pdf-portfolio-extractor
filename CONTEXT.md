@@ -19,21 +19,24 @@ Annual recurring revenue at period end, on the company's reported basis.
 _Maps_: Annual Recurring Revenue, Contracted ARR, Contracted Annual Recurring Revenue, Subscription ARR, End-of-Period ARR, ARR (End of Period), ARR.
 _Basis note_: "Contracted" (signed active contracts) vs run-rate (MRR×12) differ slightly; in this corpus every disclosed basis is contracted, none state explicit run-rate. Preserve the label.
 _Never_ (separate derived metrics, out of core set): ARR Growth (YoY), Expansion ARR as % of Total, ARR from Existing Accounts, ARR per Full-Time Employee.
-_Applicability_: `not_applicable` for lending and pure-marketplace business models.
+_Applicability_: `not_applicable` for lending and PURE marketplace; applicable to SaaS and to hybrid (marketplace plus recurring SaaS).
 
 **Net Revenue Retention** (`net_revenue_retention`):
 LTM revenue retained from the existing customer base including expansion (upsell/cross-sell), net of churn and contraction.
 _Maps_: Net Revenue Retention, Net Dollar Retention, Net Pound Retention (NPR), NRR, NDR. NDR == NRR == NPR — the latter are currency relabels (NPR = GBP), footnote-confirmed.
 _Do not conflate with_: Gross Revenue Retention (excludes expansion) or Logo Churn (count basis).
+_Applicability_: `not_applicable` for lending and pure marketplace; applicable to SaaS and hybrid.
 
 **Gross Revenue Retention** (`gross_revenue_retention`):
 LTM revenue retained from the existing base EXCLUDING expansion — a floor metric, normally capped near 100%.
 _Maps_: Gross Revenue Retention, GRR.
 _Distinct from NRR_: TalentVault reports both in one table (GRR 91%, NRR 119%); the spread is the expansion contribution. Never merge.
+_Applicability_: `not_applicable` for lending and pure marketplace; applicable to SaaS and hybrid.
 
 **Logo Churn** (`logo_churn`):
 Share of customer logos (accounts) lost over the period — a count basis, not revenue. Not 1 − NRR.
 _Maps_: Logo Churn, Annual Logo Churn, Logo Churn Rate (LTM).
+_Applicability_: `not_applicable` for lending and pure marketplace; applicable to SaaS and hybrid.
 
 **Headcount** (`headcount`):
 People employed at period end.

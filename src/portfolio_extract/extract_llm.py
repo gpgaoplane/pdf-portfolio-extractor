@@ -91,6 +91,9 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
             continue
         hint = hint_by_page.get(m.source_page) or doc_hint
         value = to_canonical(parse_number(m.raw_text), METRIC_UNIT[metric], ScaleContext(hint))
+        if metric == MetricName.NET_BURN_MONTHLY and value is not None:
+            value = abs(value)
+        components = out.revenue_components if metric == MetricName.REVENUE_QUARTERLY else None
         records.append(ExtractionRecord(
             company=out.company_name, period_year=out.period_year, period_quarter=out.period_quarter,
             metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=currency,
@@ -98,5 +101,6 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
             source_page=m.source_page, source_snippet=m.source_snippet,
             extraction_method=ExtractionMethod.LLM_PROSE, confidence_tier=ConfidenceTier.LOW,
             confidence_score=0.0, absence_reason=AbsenceReason.PRESENT,
-            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, notes=currency_note))
+            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, notes=currency_note,
+            components=components))
     return records

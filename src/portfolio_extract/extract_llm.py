@@ -44,14 +44,24 @@ class LLMExtraction(BaseModel):
     metrics: list[LLMMetric]
 
 _SYSTEM = (
-    "Extract universal-core metrics from a quarterly portfolio-company report: revenue_quarterly, "
-    "gross_margin, headcount. Use canonical names. For each, give the value EXACTLY as printed "
-    "(raw_text), the company's own label, the 1-indexed page, and the surrounding snippet. Map "
-    "variants (FTE->headcount; Recognized/Quarterly/Net/Platform/Gross Transaction Revenue->"
-    "revenue_quarterly). Never invent a value not in the text."
-    " If the report states it is a rebrand of or successor to a prior entity (often in a footnote), "
-    "set predecessor_name to that prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; "
-    "otherwise leave both null.")
+    "Extract financial and operating metrics from a quarterly portfolio-company report. "
+    "Return each metric you find using its CANONICAL name from this set: revenue_quarterly, "
+    "gross_margin, headcount, arr, net_revenue_retention, gross_revenue_retention, logo_churn, "
+    "cash_balance, net_burn_monthly, ebitda. For each, give the value EXACTLY as printed (raw_text), "
+    "the company's own label (label_as_reported), the 1-indexed page, and the surrounding snippet. "
+    "Map common variants to the canonical name: FTE / Total Headcount -> headcount; "
+    "Recognized/Quarterly/Net/Platform Revenue and Gross Transaction Revenue (marketplace net fees) -> revenue_quarterly; "
+    "Contracted/Subscription/End-of-Period ARR -> arr; Net Dollar/Pound Retention and NRR/NDR/NPR -> net_revenue_retention; "
+    "Gross Revenue Retention / GRR -> gross_revenue_retention; Logo Churn (any period) -> logo_churn; "
+    "Cash / Cash & Equivalents -> cash_balance; Monthly/Quarterly Net Burn and Cash Burn -> net_burn_monthly; "
+    "Gross Margin -> gross_margin; EBITDA -> ebitda. "
+    "NEVER map these look-alikes: GMV / Gross Transaction VALUE, Total Loan Book (a balance-sheet asset), "
+    "ACV / pipeline value, or volume counts (shipments, emission records, paying entities, seats); none are revenue or headcount. "
+    "For revenue, if the report shows a total plus components (e.g. transaction plus SaaS fees), return revenue_quarterly as the "
+    "TOTAL recognized revenue and list the breakdown in revenue_components (label, value, raw_text); if only components are shown, return their sum. "
+    "Only return a metric that actually appears in the text; never invent a value. "
+    "If the report states it is a rebrand of or successor to a prior entity (often in a footnote), set predecessor_name to that "
+    "prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; otherwise leave both null.")
 
 _MODES = {"JSON": instructor.Mode.JSON, "TOOLS": instructor.Mode.TOOLS}
 

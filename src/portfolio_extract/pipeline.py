@@ -7,6 +7,8 @@ from portfolio_extract.verify import verify_value, VerifyResult, MatchQuality
 from portfolio_extract.confidence import score_confidence, MatchLevel
 from portfolio_extract.models import ExtractionRecord, ExtractionMethod, AbsenceReason
 from portfolio_extract.registry import resolve_identity, CompanyRecord, ReviewItem
+from portfolio_extract.aliases import is_known_alias
+from portfolio_extract.applicability import basis_for, synthesize_absences
 
 
 @dataclass
@@ -33,18 +35,23 @@ def extract_pdf(pdf_path: Path | str) -> DocumentExtraction:
     for r in records:
         hint = hint_by_page.get(r.source_page) or doc_hint
         vr = (verify_value(r.value, r.canonical_unit, r.source_page, all_cells,
-                           label=r.label_as_reported, unit_hint=hint)
+                           label=r.label_as_reported, unit_hint=hint, metric=r.metric)
               if r.value is not None else None)
         level = _match_level(r, vr, text_by_page.get(r.source_page, ""))
-        tier, score = score_confidence(match_level=level, known_alias=True,  # known_alias: STUB (Plan 2c)
+        tier, score = score_confidence(match_level=level,
+                                       known_alias=is_known_alias(r.metric, r.label_as_reported),
                                        reconciled=False)
         finalized.append(r.model_copy(update={
             "extraction_method": (ExtractionMethod.TABLE_CELL
                                   if level in (MatchLevel.EXACT_CELL, MatchLevel.ROUNDING_CELL)
                                   else r.extraction_method),
             "company": company.canonical_name,
+            "basis": basis_for(r.metric, company.sector),
             "bbox": vr.bbox if vr else None, "confidence_tier": tier, "confidence_score": score,
             "absence_reason": AbsenceReason.PRESENT if r.value is not None else AbsenceReason.EXPECTED_NOT_FOUND}))
+    present = {r.metric for r in records}
+    finalized.extend(synthesize_absences(present, company.sector, company.canonical_name,
+                                         out.period_year, out.period_quarter, pdf_path.name))
     return DocumentExtraction(records=finalized, company=company, review=review)
 
 

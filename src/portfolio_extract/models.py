@@ -96,6 +96,14 @@ class Component(BaseModel):
     raw_text: str
 
 
+class Restatement(BaseModel):
+    metric: str
+    period_year: int
+    period_quarter: str
+    raw_text: str
+    note: Optional[str] = None
+
+
 class ExtractionRecord(BaseModel):
     company: str
     period_year: int
@@ -123,3 +131,4 @@ class ExtractionRecord(BaseModel):
     source_doc_hash: Optional[str] = None
     notes: Optional[str] = None
     components: Optional[list[Component]] = None
+    restated: bool = False

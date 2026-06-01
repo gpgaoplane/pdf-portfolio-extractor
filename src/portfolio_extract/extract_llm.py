@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import instructor
 from openai import OpenAI
 from portfolio_extract.models import (ExtractionRecord, MetricName, METRIC_UNIT, METRIC_PERIOD_BASIS,
-    Currency, ExtractionMethod, ConfidenceTier, AbsenceReason, Component)
+    Currency, ExtractionMethod, ConfidenceTier, AbsenceReason, Component, Restatement)
 from portfolio_extract.normalize import parse_number
 from portfolio_extract.scale import to_canonical, ScaleContext
 
@@ -41,6 +41,7 @@ class LLMExtraction(BaseModel):
     predecessor_name: str | None = None
     predecessor_effective_date: str | None = None
     revenue_components: list[Component] | None = None
+    restatements: list[Restatement] | None = None
     metrics: list[LLMMetric]
 
 _SYSTEM = (
@@ -63,7 +64,10 @@ _SYSTEM = (
     "Classify the company's sector as one of SaaS, Marketplace, Lending, or Hybrid; use Hybrid when the company reports BOTH "
     "marketplace or transaction revenue AND recurring subscription/SaaS revenue (e.g. a marketplace that also charges SaaS tool fees). "
     "If the report states it is a rebrand of or successor to a prior entity (often in a footnote), set predecessor_name to that "
-    "prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; otherwise leave both null.")
+    "prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; otherwise leave both null."
+    " If a footnote restates a PRIOR period's metric (e.g. 'Q1 revenue restated from X to Y'), add an entry to "
+    "restatements with that metric's canonical name, the PRIOR period_year and period_quarter, and raw_text set to the "
+    "NEW restated value; otherwise leave restatements empty.")
 
 _MODES = {"JSON": instructor.Mode.JSON, "TOOLS": instructor.Mode.TOOLS}
 
@@ -115,4 +119,24 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
             confidence_score=0.0, absence_reason=AbsenceReason.PRESENT,
             period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, notes=currency_note,
             components=components))
+    return records
+
+def build_restatement_records(out: LLMExtraction, source_file: str) -> list[ExtractionRecord]:
+    records: list[ExtractionRecord] = []
+    currency, _ = _coerce_currency(out.currency)
+    for rs in (out.restatements or []):
+        try:
+            metric = MetricName(rs.metric)
+        except ValueError:
+            continue
+        value = to_canonical(parse_number(rs.raw_text), METRIC_UNIT[metric], ScaleContext(None))
+        if metric == MetricName.NET_BURN_MONTHLY and value is not None:
+            value = abs(value)
+        records.append(ExtractionRecord(
+            company=out.company_name, period_year=rs.period_year, period_quarter=rs.period_quarter,
+            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=currency,
+            raw_text=rs.raw_text, label_as_reported=(rs.note or "restatement"), source_file=source_file,
+            source_page=0, source_snippet=(rs.note or ""), extraction_method=ExtractionMethod.LLM_RECONCILED,
+            confidence_tier=None, confidence_score=None, absence_reason=AbsenceReason.PRESENT,
+            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, restated=True))
     return records

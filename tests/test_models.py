@@ -31,3 +31,14 @@ def test_component_and_optional_confidence():
                     Component(label="SaaS tool fee", value=0.7, raw_text="0.7M")])
     assert r.confidence_tier is None and r.confidence_score is None
     assert r.components[0].value == 8.6
+
+def test_restatement_model_and_restated_flag():
+    from portfolio_extract.models import Restatement, ExtractionRecord, MetricName, CanonicalUnit, AbsenceReason, ExtractionMethod, PeriodBasis
+    rs = Restatement(metric="revenue_quarterly", period_year=2025, period_quarter="Q1", raw_text="4.6M")
+    assert rs.period_quarter == "Q1" and rs.note is None
+    r = ExtractionRecord(company="PeopleFlow", period_year=2025, period_quarter="Q1",
+        metric=MetricName.REVENUE_QUARTERLY, value=4.6, canonical_unit=CanonicalUnit.USD_MILLIONS,
+        raw_text="4.6M", label_as_reported="restatement", source_file="PeopleFlow_Q2_2025.pdf",
+        source_page=0, source_snippet="", extraction_method=ExtractionMethod.LLM_RECONCILED,
+        absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.FLOW_QUARTERLY, restated=True)
+    assert r.restated is True

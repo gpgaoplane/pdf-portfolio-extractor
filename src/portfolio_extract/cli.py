@@ -31,7 +31,7 @@ def run(pdf_paths: list[str], db_path: Path | str = "out/portfolio.db") -> int:
             for item in registry.review:
                 f.write(item.model_dump_json() + "\n")
     manifest = {
-        "provider": os.environ.get("LLM_BASE_URL"), "model": os.environ.get("LLM_MODEL"),
+        "base_url": os.environ.get("LLM_BASE_URL"), "model": os.environ.get("LLM_MODEL"),
         "prompt_version": PROMPT_VERSION, "documents": len(pdf_paths), "records": total,
         "by_tier": dict(by_tier), "by_method": dict(by_method),
         "review_items": len(registry.review), "wall_clock_s": round(time.perf_counter() - start, 2),

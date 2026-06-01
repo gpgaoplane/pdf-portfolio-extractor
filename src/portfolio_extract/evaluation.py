@@ -105,10 +105,10 @@ def time_series_flags(records, factor=5.0) -> list:
     flags = []
     for (company, metric), seq in by.items():
         seq.sort(key=lambda t: (t[0], t[1]))
-        for (_, q0, v0), (_, q1, v1) in zip(seq, seq[1:]):
+        for (y0, q0, v0), (y1, q1, v1) in zip(seq, seq[1:]):
             ratio = max(abs(v0), abs(v1)) / max(min(abs(v0), abs(v1)), 1e-9)
             if ratio >= factor:
-                flags.append((company, metric.value, f"{q0}->{q1}", round(ratio, 1)))
+                flags.append((company, metric.value, f"{y0} {q0}->{y1} {q1}", round(ratio, 1)))
     return flags
 
 def run_eval(db_path, labels_path) -> dict:

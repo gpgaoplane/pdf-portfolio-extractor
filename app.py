@@ -70,9 +70,13 @@ if live:
         "to the matrix below. Source-verified (Layer 1); not checked against ground truth (Layer 2)."
     )
     if st.button("Clear live additions"):
+        import shutil
+        if st.session_state.get("upload_dir"):
+            shutil.rmtree(st.session_state.upload_dir, ignore_errors=True)
         st.session_state.live_records = []
         st.session_state.live_companies = {}
-        st.session_state.pop("last_extract", None)
+        for k in ("last_extract", "live_pdf_paths", "upload_dir"):
+            st.session_state.pop(k, None)
         st.rerun()
 
 st.divider()
@@ -150,7 +154,8 @@ else:
     else:
         headline = f"{sym}{val:g}M"
 
-    st.markdown(f"### {headline}")
+    st.markdown(f"<div style='font-size:2rem;font-weight:700;margin:0.2em 0'>{headline}</div>",
+                unsafe_allow_html=True)
     st.markdown(
         f"Reported as **{citation['label_as_reported']}** "
         f"in {citation['company']}'s {citation['period']} report."
@@ -177,7 +182,8 @@ else:
     if citation.get("restatement_note"):
         st.warning(citation["restatement_note"])
 
-    src_path = os.path.join("data", citation["source_file"] or "")
+    _uploaded_paths = st.session_state.get("live_pdf_paths", {})
+    src_path = _uploaded_paths.get(citation["source_file"]) or os.path.join("data", citation["source_file"] or "")
     if citation["source_page"] and citation["source_file"] and os.path.exists(src_path):
         with st.expander("Verify in source"):
             try:
@@ -327,12 +333,14 @@ try:
 
             from portfolio_extract.pipeline import extract_pdf
 
-            tmp_path = None
             if uploaded is not None:
-                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                    tmp.write(uploaded.getvalue())  # close handle so pdfplumber can reopen it (Windows)
-                    tmp_path = tmp.name
-                target = tmp_path
+                # Keep the original filename: company identity is parsed from it, and the file
+                # must stay on disk so "Verify in source" can render its page later this session.
+                if "upload_dir" not in st.session_state:
+                    st.session_state.upload_dir = tempfile.mkdtemp(prefix="pfx_uploads_")
+                target = os.path.join(st.session_state.upload_dir, uploaded.name)
+                with open(target, "wb") as f:
+                    f.write(uploaded.getvalue())
             else:
                 target = f"data/{choice}"
             with st.spinner("Extracting (live LLM call)..."):
@@ -344,12 +352,6 @@ try:
                         "The prebuilt results above are unaffected."
                     )
                     de = None
-                finally:
-                    if tmp_path:
-                        try:
-                            os.unlink(tmp_path)
-                        except OSError:
-                            pass
             if de is not None:
                 new_keys = {_cell_key(r) for r in de.records}
                 st.session_state.live_records = [
@@ -357,6 +359,8 @@ try:
                     if _cell_key(r) not in new_keys
                 ] + list(de.records)
                 st.session_state.live_companies[de.company.canonical_name] = de.company
+                if uploaded is not None:
+                    st.session_state.setdefault("live_pdf_paths", {})[uploaded.name] = target
                 st.session_state.last_extract = {
                     "company": de.company.canonical_name,
                     "sector": de.company.sector.value,

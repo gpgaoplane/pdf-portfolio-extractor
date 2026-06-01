@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from portfolio_extract.structural import extract_structure
-from portfolio_extract.extract_llm import extract_with_llm, build_records_from_llm
+from portfolio_extract.extract_llm import extract_with_llm, build_records_from_llm, build_restatement_records
 from portfolio_extract.verify import verify_value, VerifyResult, MatchQuality
 from portfolio_extract.confidence import score_confidence, MatchLevel
 from portfolio_extract.models import ExtractionRecord, ExtractionMethod, AbsenceReason
@@ -30,6 +30,7 @@ def extract_pdf(pdf_path: Path | str) -> DocumentExtraction:
     company, review = resolve_identity(pdf_path.name, out)
     records = build_records_from_llm(out, source_file=pdf_path.name,
                                      hint_by_page=hint_by_page, doc_hint=doc_hint)
+    restatements = build_restatement_records(out, pdf_path.name)
 
     finalized: list[ExtractionRecord] = []
     for r in records:
@@ -49,6 +50,9 @@ def extract_pdf(pdf_path: Path | str) -> DocumentExtraction:
             "basis": basis_for(r.metric, company.sector),
             "bbox": vr.bbox if vr else None, "confidence_tier": tier, "confidence_score": score,
             "absence_reason": AbsenceReason.PRESENT if r.value is not None else AbsenceReason.EXPECTED_NOT_FOUND}))
+    for rr in restatements:
+        finalized.append(rr.model_copy(update={"company": company.canonical_name,
+                                               "basis": basis_for(rr.metric, company.sector)}))
     present = {r.metric for r in records}
     finalized.extend(synthesize_absences(present, company.sector, company.canonical_name,
                                          out.period_year, out.period_quarter, pdf_path.name))

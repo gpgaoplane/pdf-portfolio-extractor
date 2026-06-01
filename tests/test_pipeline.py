@@ -40,3 +40,19 @@ def test_match_level_absent_when_value_is_none():
     # a metric the LLM returned but whose raw_text isn't numeric -> value None
     r = SimpleNamespace(value=None, raw_text="N/A", source_snippet="Headcount N/A")
     assert _match_level(r, None, "Headcount N/A") == MatchLevel.ABSENT
+
+def test_pipeline_appends_restatement_record(monkeypatch, data_dir):
+    from portfolio_extract.models import Restatement
+    fake = LLMExtraction(company_name="PeopleFlow HR Systems Ltd.", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="GBP",
+        restatements=[Restatement(metric="revenue_quarterly", period_year=2025, period_quarter="Q1", raw_text="4.6M")],
+        metrics=[LLMMetric(metric="revenue_quarterly", raw_text="5.1M", label_as_reported="Quarterly Revenue",
+                           source_page=1, source_snippet="Quarterly Revenue 5.1M")])
+    monkeypatch.setattr("portfolio_extract.pipeline.extract_with_llm", lambda texts: fake)
+    de = extract_pdf(data_dir / "PeopleFlow_Q2_2025.pdf")
+    restated = [r for r in de.records if r.restated]
+    assert len(restated) == 1
+    assert restated[0].period_quarter == "Q1" and restated[0].value == 4.6
+    assert restated[0].basis == "saas_recognized"
+    cur = [r for r in de.records if r.metric.value == "revenue_quarterly" and not r.restated and r.period_quarter == "Q2"]
+    assert len(cur) == 1

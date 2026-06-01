@@ -9,6 +9,7 @@ dev = ["pytest>=8.0", "respx>=0.21", "pyyaml>=6.0"]
 
 [project.scripts]
 portfolio-extract = "portfolio_extract.cli:main"
+portfolio-eval = "portfolio_extract.evaluation:main"
 
 [build-system]
 requires = ["setuptools>=68"]

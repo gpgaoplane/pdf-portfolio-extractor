@@ -2,6 +2,7 @@ from __future__ import annotations
 import re
 import pandas as pd
 from portfolio_extract.models import MetricName, CanonicalUnit, METRIC_UNIT
+from portfolio_extract.evaluation import _norm_quarter
 
 def _reconcile(df):
     if df.empty:
@@ -86,6 +87,29 @@ def overview_table(frame):
                                          METRIC_UNIT[MetricName(metric)], row["absence_reason"])
         rows[company] = cells
     return pd.DataFrame.from_dict(rows, orient="index", columns=metric_order)
+
+def citation_for(records, company, period, metric):
+    year, qtoken = period[0], _norm_quarter(period[1])
+    matches = [r for r in records if r.company == company and r.period_year == year
+               and _norm_quarter(r.period_quarter) == qtoken and r.metric == metric]
+    reported = next((r for r in matches if not r.restated), None)
+    restated = next((r for r in matches if r.restated), None)
+    rec = restated or reported
+    if rec is None:
+        return None
+    out = {
+        "company": rec.company, "period": f"{year} {qtoken}", "metric": metric.value,
+        "value": rec.value, "currency": rec.currency.value, "label_as_reported": rec.label_as_reported,
+        "snippet": rec.source_snippet, "source_file": rec.source_file, "source_page": rec.source_page,
+        "confidence": rec.confidence_tier.value if rec.confidence_tier else None,
+        "basis": rec.basis, "extraction_method": rec.extraction_method.value,
+        "restated": rec.restated, "original_value": None,
+    }
+    if restated is not None and reported is not None:
+        out["original_value"] = reported.value
+        out["restatement_note"] = (f"Restated: the figure of {restated.value} supersedes the originally "
+                                   f"reported {reported.value}.")
+    return out
 
 def time_series(frame, company, metric, companies=None, include_predecessor=False):
     names = [company]

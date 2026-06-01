@@ -99,3 +99,42 @@ def test_time_series_stitches_predecessor():
     assert set(ts["company"]) == {"ApexFreight", "FleetLink"}
     ts_solo = time_series(df, "ApexFreight", MetricName.REVENUE_QUARTERLY, companies=companies, include_predecessor=False)
     assert set(ts_solo["company"]) == {"ApexFreight"}
+
+def test_citation_for_returns_provenance():
+    from portfolio_extract.view import citation_for
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, ConfidenceTier, AbsenceReason, PeriodBasis)
+    rec = ExtractionRecord(company="NovaCloud", period_year=2025, period_quarter="Q2",
+        metric=MetricName.GROSS_MARGIN, value=78.0, canonical_unit=CanonicalUnit.PERCENT, currency=Currency.USD,
+        basis="saas_cogs", raw_text="78%", label_as_reported="Gross Margin", source_file="NovaCloud_Q2_2025.pdf",
+        source_page=1, source_snippet="Gross Margin 78%", extraction_method=ExtractionMethod.TABLE_CELL,
+        confidence_tier=ConfidenceTier.HIGH, confidence_score=1.0, absence_reason=AbsenceReason.PRESENT,
+        period_basis=PeriodBasis.RATIO_LTM)
+    c = citation_for([rec], "NovaCloud", (2025, "Q2"), MetricName.GROSS_MARGIN)
+    assert c is not None
+    assert c["source_file"] == "NovaCloud_Q2_2025.pdf" and c["source_page"] == 1
+    assert c["label_as_reported"] == "Gross Margin" and c["snippet"] == "Gross Margin 78%"
+    assert c["confidence"] == "HIGH" and c["basis"] == "saas_cogs" and c["value"] == 78.0
+
+def test_citation_for_missing_returns_none():
+    from portfolio_extract.view import citation_for
+    from portfolio_extract.models import MetricName
+    assert citation_for([], "X", (2025, "Q2"), MetricName.ARR) is None
+
+def test_citation_for_restated_supersedes_keeps_original():
+    from portfolio_extract.view import citation_for
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis)
+    def rev(value, restated, src):
+        return ExtractionRecord(company="PeopleFlow", period_year=2025, period_quarter="Q1",
+            metric=MetricName.REVENUE_QUARTERLY, value=value, canonical_unit=CanonicalUnit.USD_MILLIONS,
+            currency=Currency.GBP, raw_text=f"{value}M", label_as_reported="Quarterly Revenue",
+            source_file=src, source_page=2, source_snippet=f"Revenue {value}M",
+            extraction_method=ExtractionMethod.LLM_PROSE, absence_reason=AbsenceReason.PRESENT,
+            period_basis=PeriodBasis.FLOW_QUARTERLY, restated=restated)
+    recs = [rev(4.7, False, "PeopleFlow_Q1_2025.pdf"), rev(4.6, True, "PeopleFlow_Q2_2025.pdf")]
+    c = citation_for(recs, "PeopleFlow", (2025, "Q1"), MetricName.REVENUE_QUARTERLY)
+    assert c["value"] == 4.6 and c["restated"] is True
+    assert c["original_value"] == 4.7
+    assert c["source_file"] == "PeopleFlow_Q2_2025.pdf"
+    assert "restatement_note" in c

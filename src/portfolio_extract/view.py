@@ -51,3 +51,12 @@ def comparison_frame(records, registry=None):
         "source_file": r.source_file, "restated": r.restated,
     } for r in records]
     return _reconcile(pd.DataFrame(rows))
+
+def time_series(frame, company, metric, companies=None, include_predecessor=False):
+    names = [company]
+    if include_predecessor and companies and company in companies:
+        pred = companies[company].predecessor
+        if pred:
+            names.append(pred.name)
+    sub = frame[(frame["company"].isin(names)) & (frame["metric"] == metric.value)]
+    return sub.sort_values(["period_year", "period_quarter"])

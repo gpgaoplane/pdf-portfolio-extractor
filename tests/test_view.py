@@ -57,3 +57,22 @@ def test_metric_matrix_gates_lending_gm_separately():
     groups = metric_matrix(df, MetricName.GROSS_MARGIN)
     assert set(groups) == {"saas_marketplace", "lending"}
     assert "LendBridge" in groups["lending"].index and "NovaCloud" in groups["saas_marketplace"].index
+
+def test_time_series_stitches_predecessor():
+    from portfolio_extract.view import comparison_frame, time_series
+    from portfolio_extract.registry import CompanyRecord, Predecessor
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis, Sector)
+    def rev(company, year, q, v):
+        return ExtractionRecord(company=company, period_year=year, period_quarter=q,
+            metric=MetricName.REVENUE_QUARTERLY, value=v, canonical_unit=CanonicalUnit.USD_MILLIONS,
+            currency=Currency.USD, raw_text=f"{v}M", label_as_reported="Revenue", source_file="x.pdf",
+            source_page=1, source_snippet="x", extraction_method=ExtractionMethod.LLM_PROSE,
+            absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.FLOW_QUARTERLY)
+    df = comparison_frame([rev("FleetLink", 2025, "Q1", 8.9), rev("ApexFreight", 2025, "Q2", 9.3)])
+    companies = {"ApexFreight": CompanyRecord(canonical_name="ApexFreight", sector=Sector.HYBRID,
+                                              predecessor=Predecessor(name="FleetLink"))}
+    ts = time_series(df, "ApexFreight", MetricName.REVENUE_QUARTERLY, companies=companies, include_predecessor=True)
+    assert set(ts["company"]) == {"ApexFreight", "FleetLink"}
+    ts_solo = time_series(df, "ApexFreight", MetricName.REVENUE_QUARTERLY, companies=companies, include_predecessor=False)
+    assert set(ts_solo["company"]) == {"ApexFreight"}

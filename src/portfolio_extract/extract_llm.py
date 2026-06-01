@@ -120,3 +120,23 @@ def build_records_from_llm(out: LLMExtraction, source_file: str,
             period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, notes=currency_note,
             components=components))
     return records
+
+def build_restatement_records(out: LLMExtraction, source_file: str) -> list[ExtractionRecord]:
+    records: list[ExtractionRecord] = []
+    currency, _ = _coerce_currency(out.currency)
+    for rs in (out.restatements or []):
+        try:
+            metric = MetricName(rs.metric)
+        except ValueError:
+            continue
+        value = to_canonical(parse_number(rs.raw_text), METRIC_UNIT[metric], ScaleContext(None))
+        if metric == MetricName.NET_BURN_MONTHLY and value is not None:
+            value = abs(value)
+        records.append(ExtractionRecord(
+            company=out.company_name, period_year=rs.period_year, period_quarter=rs.period_quarter,
+            metric=metric, value=value, canonical_unit=METRIC_UNIT[metric], currency=currency,
+            raw_text=rs.raw_text, label_as_reported=(rs.note or "restatement"), source_file=source_file,
+            source_page=0, source_snippet=(rs.note or ""), extraction_method=ExtractionMethod.LLM_RECONCILED,
+            confidence_tier=None, confidence_score=None, absence_reason=AbsenceReason.PRESENT,
+            period_basis=METRIC_PERIOD_BASIS[metric], prompt_version=PROMPT_VERSION, restated=True))
+    return records

@@ -78,6 +78,21 @@ def test_revenue_components_nested_on_total():
     rec = build_records_from_llm(out, source_file="ApexFreight_Q2_2025.pdf")[0]
     assert rec.value == 9.3 and len(rec.components) == 2 and rec.components[0].value == 8.6
 
+def test_build_restatement_records_keyed_to_prior_period():
+    from portfolio_extract.models import Restatement
+    from portfolio_extract.extract_llm import build_restatement_records
+    out = LLMExtraction(company_name="PeopleFlow HR Systems Ltd.", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="GBP",
+        restatements=[Restatement(metric="revenue_quarterly", period_year=2025, period_quarter="Q1",
+                                  raw_text="4.6M", note="restated from 4.7M")],
+        metrics=[])
+    recs = build_restatement_records(out, source_file="PeopleFlow_Q2_2025.pdf")
+    assert len(recs) == 1
+    r = recs[0]
+    assert r.period_quarter == "Q1" and r.value == 4.6 and r.restated is True
+    assert r.confidence_tier is None and r.currency.value == "GBP"
+    assert r.source_file == "PeopleFlow_Q2_2025.pdf"
+
 @pytest.mark.parametrize("raw, expected, recognized", [
     ("USD", Currency.USD, True), ("usd", Currency.USD, True),
     ("GBP ", Currency.GBP, True), (" gbp", Currency.GBP, True),

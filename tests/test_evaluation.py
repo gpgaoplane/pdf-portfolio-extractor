@@ -62,6 +62,17 @@ def test_time_series_flags_big_jump():
     flags = time_series_flags(records)
     assert any(f[0] == "NovaCloud" and f[1] == "arr" for f in flags)
 
+def test_summarize_report_totals():
+    from portfolio_extract.evaluation import summarize_report
+    rep = {"score": {"per_metric": {"revenue_quarterly": [10, 10], "arr": [6, 6]}, "omissions": 0, "hallucinations": 0,
+                     "status_agreement": [100, 100]},
+           "ablation": {"verified": [52, 0], "unverified": [2, 0]},
+           "calibration": {"HIGH": [52, 0], "MEDIUM": [2, 0], "LOW": [0, 0]}, "time_series": []}
+    s = summarize_report(rep)
+    assert s["present_correct"] == 16 and s["present_total"] == 16
+    assert s["pct_verified"] == 96   # 52 / (52+2) rounded
+    assert s["omissions"] == 0 and s["hallucinations"] == 0
+
 def test_run_eval_reads_db(tmp_path):
     from portfolio_extract.repository import SqliteRepository
     from portfolio_extract.evaluation import run_eval

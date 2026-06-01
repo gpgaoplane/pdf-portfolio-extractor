@@ -1,4 +1,8 @@
+import json
+
+import pandas as pd
 import streamlit as st
+from portfolio_extract.evaluation import summarize_report
 from portfolio_extract.models import MetricName
 from portfolio_extract.repository import load_records_jsonl
 from portfolio_extract.registry import load_companies_json
@@ -16,6 +20,12 @@ def _load():
 @st.cache_data
 def _load_companies():
     return load_companies_json("eval/demo_companies.json")
+
+
+@st.cache_data
+def _load_eval_report():
+    with open("eval/eval_report.json", encoding="utf-8") as f:
+        return json.load(f)
 
 
 records = _load()
@@ -148,3 +158,63 @@ else:
     pred = companies[ts_company].predecessor if ts_company in companies else None
     if pred and pred.name in set(ts["company"]):
         st.caption(f"Includes {pred.name} before the rename to {ts_company}.")
+
+st.divider()
+st.header("Trust & quality")
+
+st.markdown(
+    "Accuracy here is measured against a label set transcribed by hand from the source PDFs, "
+    "independent of the extractor. Each labelled cell records the expected value and whether the "
+    "metric is present, null, or not applicable in that report. The extractor's output is then "
+    "compared cell by cell."
+)
+
+st.subheader("What this evaluation does and does not show")
+st.markdown(
+    "The corpus is clean and well formatted, so these numbers describe behaviour on tidy inputs "
+    "rather than worst-case scrambled ones. The holdout is prior quarters of companies the "
+    "extractor has already seen, so it tests generalization across time, not generalization to a "
+    "brand-new company with an unfamiliar report layout. And because the error rate on this corpus "
+    "is near zero, the results cannot demonstrate two mechanisms that do exist in the pipeline: "
+    "source-table verification catching a wrong value, and the confidence tiers separating reliable "
+    "extractions from shaky ones. Both would only show their worth on messier inputs."
+)
+
+st.subheader("Supporting evidence")
+st.caption(
+    "Two label sets. Dev is the set used while building the extractor; holdout is held-back prior "
+    "quarters of the same companies. Denominators are shown so nothing hides behind a single percentage."
+)
+
+report = _load_eval_report()
+_LABEL = {"dev": "Dev", "holdout": "Holdout"}
+
+for split in ("dev", "holdout"):
+    rep = report[split]
+    s = summarize_report(rep)
+    so, st_total = s["status_agreement"]
+
+    st.markdown(f"#### {_LABEL[split]}")
+    e1, e2, e3, e4 = st.columns(4)
+    e1.metric("Present values correct", f"{s['present_correct']} of {s['present_total']}")
+    e2.metric("Verified against source tables", f"{s['pct_verified']}%")
+    e3.metric("Omissions / hallucinations", f"{s['omissions']} / {s['hallucinations']}")
+    e4.metric("Status agreement", f"{so} of {st_total}")
+
+    st.write("")
+    pm = rep["score"]["per_metric"]
+    pm_df = pd.DataFrame(
+        [(m.replace("_", " ").title(), f"{c} of {n}") for m, (c, n) in pm.items()],
+        columns=["Metric", "Correct of present"],
+    )
+    st.dataframe(pm_df, use_container_width=True, hide_index=True)
+
+    cal = rep["calibration"]
+    cal_df = pd.DataFrame(
+        [(tier, c, w) for tier, (c, w) in cal.items()],
+        columns=["Confidence tier", "Correct", "Wrong"],
+    )
+    with st.expander(f"Confidence calibration ({_LABEL[split]})"):
+        st.dataframe(cal_df, use_container_width=True, hide_index=True)
+
+    st.write("")

@@ -111,6 +111,19 @@ def time_series_flags(records, factor=5.0) -> list:
                 flags.append((company, metric.value, f"{y0} {q0}->{y1} {q1}", round(ratio, 1)))
     return flags
 
+def summarize_report(rep) -> dict:
+    pm = rep["score"]["per_metric"]
+    present_correct = sum(v[0] for v in pm.values())
+    present_total = sum(v[1] for v in pm.values())
+    ab = rep["ablation"]
+    ver = ab["verified"][0] + ab["verified"][1]
+    unver = ab["unverified"][0] + ab["unverified"][1]
+    pct_verified = round(100 * ver / max(ver + unver, 1))
+    return {"present_correct": present_correct, "present_total": present_total,
+            "pct_verified": pct_verified, "omissions": rep["score"]["omissions"],
+            "hallucinations": rep["score"]["hallucinations"],
+            "status_agreement": rep["score"]["status_agreement"]}
+
 def run_eval(db_path, labels_path) -> dict:
     from portfolio_extract.repository import SqliteRepository
     records = SqliteRepository(db_path).query()

@@ -8,7 +8,7 @@ from portfolio_extract.models import MetricName, METRIC_UNIT, CanonicalUnit
 from portfolio_extract.repository import load_records_jsonl
 from portfolio_extract.registry import load_companies_json
 from portfolio_extract.view import (comparison_frame, overview_table, citation_for,
-                                     saas_comparison, time_series, _quarter_int)
+                                     saas_comparison, time_series, revenue_comparison, _quarter_int)
 from portfolio_extract.structural import render_page_png
 
 st.set_page_config(page_title="Portfolio Metrics Explorer", layout="wide")
@@ -92,15 +92,21 @@ def _latest_period(company):
     return (company, last["period_year"], str(last["period_quarter"]))
 
 
-_overview = overview_table(frame)
-_live_shown = [c for c in _overview.index if _latest_period(c) in live_company_periods]
-if _live_shown:
-    _overview = _overview.rename(index={c: f"{c} · live (Layer 2 unverified)" for c in _live_shown})
+def _live_at_latest(company):
+    return _latest_period(company) in live_company_periods
+
+
+def _mark_live_index(df):
+    marked = {c for c in df.index if _live_at_latest(c)}
+    return df.rename(index={c: f"{c} (live)" for c in marked}) if marked else df
+
+
+_overview = _mark_live_index(overview_table(frame))
 st.dataframe(_overview, use_container_width=True)
-if _live_shown:
+if any(_live_at_latest(c) for c in frame["company"].unique()):
     st.caption(
-        "Rows tagged “live (Layer 2 unverified)” were extracted this session; they carry "
-        "source verification but no ground-truth check."
+        "Companies tagged “(live)” were extracted this session; they carry source verification "
+        "(Layer 1) but no ground-truth check (Layer 2)."
     )
 
 st.divider()
@@ -197,20 +203,51 @@ else:
 st.divider()
 st.header("Insights")
 
+st.subheader("Revenue across the portfolio")
+st.caption(
+    "Latest reported quarterly revenue for every company, across all business models. Native "
+    "currency (mostly USD; PeopleFlow in GBP), not FX-converted. The revenue basis differs by "
+    "model (SaaS recognized revenue, marketplace net fees, lending interest income); each figure "
+    "traces to its source above."
+)
+_rev = revenue_comparison(frame)
+if _rev.empty:
+    st.info("No revenue values in the current data.")
+else:
+    _SYM = {"USD": "$", "GBP": "£", "EUR": "€"}
+
+    def _rev_label(c):
+        cur = _SYM.get(_rev.loc[c, "currency"], "")
+        tag = f" {cur}" if cur and cur != "$" else ""
+        return f"{c}{tag}{' (live)' if _live_at_latest(c) else ''}"
+
+    _rev_plot = _rev[["revenue"]].copy()
+    _rev_plot.index = [_rev_label(c) for c in _rev.index]
+    st.bar_chart(_rev_plot.rename(columns={"revenue": "Revenue (M, native currency)"}))
+    _top = _rev["revenue"].idxmax()
+    st.markdown(
+        f"{_top} reports the highest revenue this period at "
+        f"{_SYM.get(_rev.loc[_top, 'currency'], '')}{_rev.loc[_top, 'revenue']:g}M. Revenue is the "
+        "one top-line that compares across SaaS, marketplace, and lending, which is why it spans "
+        "the whole portfolio while ARR and retention below stay SaaS-only."
+    )
+
+st.write("")
 st.subheader("How are the SaaS companies growing and retaining?")
 st.caption("ARR ($M) and net revenue retention (%) for SaaS companies, latest reported period.")
 saas = saas_comparison(frame, companies)
 if saas.empty:
     st.info("No SaaS companies with ARR or retention in the current data.")
 else:
-    chart = saas.rename(columns={"arr": "ARR ($M)", "net_revenue_retention": "NRR (%)"})
+    saas_m = _mark_live_index(saas)
+    chart = saas_m.rename(columns={"arr": "ARR ($M)", "net_revenue_retention": "NRR (%)"})
     st.dataframe(chart, use_container_width=True)
     # ARR ($M) and NRR (%) are on different scales; chart them separately so neither flattens the other.
     ac, nc = st.columns(2)
     ac.caption("ARR ($M)")
-    ac.bar_chart(saas[["arr"]].dropna(how="all").rename(columns={"arr": "ARR ($M)"}))
+    ac.bar_chart(saas_m[["arr"]].dropna(how="all").rename(columns={"arr": "ARR ($M)"}))
     nc.caption("Net revenue retention (%)")
-    nc.bar_chart(saas[["net_revenue_retention"]].dropna(how="all").rename(columns={"net_revenue_retention": "NRR (%)"}))
+    nc.bar_chart(saas_m[["net_revenue_retention"]].dropna(how="all").rename(columns={"net_revenue_retention": "NRR (%)"}))
     leaders = saas["arr"].dropna()
     if not leaders.empty:
         top = leaders.idxmax()

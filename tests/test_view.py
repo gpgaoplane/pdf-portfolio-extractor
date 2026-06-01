@@ -119,6 +119,13 @@ def test_saas_comparison_filters_by_sector():
     assert "NovaCloud" in out.index and "LendBridge" not in out.index
     assert out.loc["NovaCloud", "arr"] == 34.2 and out.loc["NovaCloud", "net_revenue_retention"] == 123.0
 
+def test_revenue_comparison_spans_all_sectors():
+    from portfolio_extract.view import comparison_frame, revenue_comparison
+    frame = comparison_frame([_r("NovaCloud", 34.2), _r("LendBridge", 12.1), _r("ApexFreight", 9.3)])
+    out = revenue_comparison(frame)   # all business models, not basis-gated
+    assert {"NovaCloud", "LendBridge", "ApexFreight"} == set(out.index)
+    assert out.loc["NovaCloud", "revenue"] == 34.2 and out.loc["LendBridge", "revenue"] == 12.1
+
 def test_citation_for_returns_provenance():
     from portfolio_extract.view import citation_for
     from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,

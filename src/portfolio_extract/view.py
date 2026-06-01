@@ -107,6 +107,21 @@ def saas_comparison(frame, companies):
         rows[company] = cells
     return pd.DataFrame.from_dict(rows, orient="index", columns=cols)
 
+def revenue_comparison(frame):
+    metric = MetricName.REVENUE_QUARTERLY.value
+    rows = {}
+    for company, g in frame.groupby("company"):
+        latest = g.sort_values(["period_year", "period_quarter"],
+                               key=lambda s: s.map(_quarter_int) if s.name == "period_quarter" else s).iloc[-1:]
+        if latest.empty:
+            continue
+        latest_key = (latest.iloc[0]["period_year"], latest.iloc[0]["period_quarter"])
+        cur = g[(g["period_year"] == latest_key[0]) & (g["period_quarter"] == latest_key[1])]
+        mrow = cur[(cur["metric"] == metric) & (cur["absence_reason"] == "present")]
+        if not mrow.empty:
+            rows[company] = {"revenue": mrow.iloc[0]["value"], "currency": mrow.iloc[0]["currency"]}
+    return pd.DataFrame.from_dict(rows, orient="index", columns=["revenue", "currency"])
+
 def citation_for(records, company, period, metric):
     year, qtoken = period[0], _norm_quarter(period[1])
     matches = [r for r in records if r.company == company and r.period_year == year

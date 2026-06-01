@@ -63,3 +63,12 @@ class SqliteRepository:
         with closing(self._conn()) as c:
             rows = c.execute("SELECT payload FROM companies").fetchall()
         return [CompanyRecord.model_validate_json(r["payload"]) for r in rows]
+
+def export_records_jsonl(records: list[ExtractionRecord], path) -> None:
+    from pathlib import Path
+    Path(path).write_text("\n".join(r.model_dump_json() for r in records) + "\n", encoding="utf-8")
+
+def load_records_jsonl(path) -> list[ExtractionRecord]:
+    from pathlib import Path
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return [ExtractionRecord.model_validate_json(ln) for ln in lines if ln.strip()]

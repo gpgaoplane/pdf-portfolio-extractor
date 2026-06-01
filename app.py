@@ -65,8 +65,8 @@ def _period_int(p):
 
 
 tc1, tc2, tc3 = st.columns(3)
-companies = sorted(frame["company"].unique())
-sel_company = tc1.selectbox("Company", companies)
+company_names = sorted(frame["company"].unique())
+sel_company = tc1.selectbox("Company", company_names)
 
 cdf = frame[frame["company"] == sel_company]
 periods = sorted({(int(y), str(q)) for y, q in zip(cdf["period_year"], cdf["period_quarter"])},

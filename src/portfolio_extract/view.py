@@ -9,7 +9,23 @@ def company_period_matrix(records: list[ExtractionRecord], metric: MetricName
             for r in records if r.metric == metric}
 
 def _reconcile(df):
-    return df
+    if df.empty:
+        return df.assign(original_value=None, origin=None)
+    out = []
+    keys = ["company", "period_year", "period_quarter", "metric"]
+    for _, g in df.groupby(keys, dropna=False):
+        restated = g[g["restated"] == True]
+        asrep = g[g["restated"] == False]
+        if not restated.empty:
+            row = restated.iloc[-1].to_dict()                 # latest disclosing wins (tiebreak)
+            row["original_value"] = asrep.iloc[0]["value"] if not asrep.empty else None
+            row["origin"] = "restated" if not asrep.empty else "restatement_only"
+        else:
+            row = asrep.iloc[0].to_dict()
+            row["original_value"] = None
+            row["origin"] = "reported"
+        out.append(row)
+    return pd.DataFrame(out)
 
 def comparison_frame(records, registry=None):
     rows = [{

@@ -26,3 +26,19 @@ def test_comparison_frame_long_format():
     df = comparison_frame(recs)
     assert list(df["company"]) == ["NovaCloud"]
     assert df.iloc[0]["basis"] == "saas_cogs" and df.iloc[0]["metric"] == "gross_margin"
+
+def test_reconcile_prefers_restated_keeps_original():
+    from portfolio_extract.view import comparison_frame
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis)
+    def rev(value, restated, src):
+        return ExtractionRecord(company="PeopleFlow", period_year=2025, period_quarter="Q1",
+            metric=MetricName.REVENUE_QUARTERLY, value=value, canonical_unit=CanonicalUnit.USD_MILLIONS,
+            currency=Currency.GBP, raw_text=f"{value}M", label_as_reported="Quarterly Revenue",
+            source_file=src, source_page=1, source_snippet="x", extraction_method=ExtractionMethod.LLM_PROSE,
+            absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.FLOW_QUARTERLY, restated=restated)
+    df = comparison_frame([rev(4.7, False, "PeopleFlow_Q1_2025.pdf"), rev(4.6, True, "PeopleFlow_Q2_2025.pdf")])
+    row = df[(df["company"] == "PeopleFlow") & (df["metric"] == "revenue_quarterly")]
+    assert len(row) == 1
+    assert row.iloc[0]["value"] == 4.6 and row.iloc[0]["original_value"] == 4.7
+    assert row.iloc[0]["origin"] == "restated"

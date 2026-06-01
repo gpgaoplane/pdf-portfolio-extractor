@@ -2,7 +2,7 @@
 name = "portfolio-extract"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["pdfplumber>=0.11", "pydantic>=2.7", "instructor>=1.5", "openai>=1.40", "python-dotenv>=1.0"]
+dependencies = ["pdfplumber>=0.11", "pydantic>=2.7", "instructor>=1.5", "openai>=1.40", "python-dotenv>=1.0", "pandas>=2.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "respx>=0.21", "pyyaml>=6.0"]

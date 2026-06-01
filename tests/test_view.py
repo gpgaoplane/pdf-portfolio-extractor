@@ -13,3 +13,16 @@ def _r(company, value):
 def test_matrix_groups_by_company_period():
     m = company_period_matrix([_r("NovaCloud", 8.4), _r("MediSight", 6.8)], MetricName.REVENUE_QUARTERLY)
     assert m[("NovaCloud", 2025, "Q2")] == 8.4 and m[("MediSight", 2025, "Q2")] == 6.8
+
+def test_comparison_frame_long_format():
+    from portfolio_extract.view import comparison_frame
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis)
+    recs = [ExtractionRecord(company="NovaCloud", period_year=2025, period_quarter="Q2",
+        metric=MetricName.GROSS_MARGIN, value=78.0, canonical_unit=CanonicalUnit.PERCENT, currency=Currency.USD,
+        basis="saas_cogs", raw_text="78%", label_as_reported="Gross Margin", source_file="NovaCloud_Q2_2025.pdf",
+        source_page=1, source_snippet="x", extraction_method=ExtractionMethod.TABLE_CELL,
+        absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.RATIO_LTM)]
+    df = comparison_frame(recs)
+    assert list(df["company"]) == ["NovaCloud"]
+    assert df.iloc[0]["basis"] == "saas_cogs" and df.iloc[0]["metric"] == "gross_margin"

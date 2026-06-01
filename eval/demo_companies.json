@@ -1,0 +1,77 @@
+[
+  {
+    "canonical_name": "NovaCloud",
+    "sector": "SaaS",
+    "aliases": [
+      "NovaCloud Analytics Inc."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "LendBridge",
+    "sector": "Lending",
+    "aliases": [
+      "LendBridge Capital Corp."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "MediSight",
+    "sector": "SaaS",
+    "aliases": [
+      "MediSight Data Platform Inc."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "PeopleFlow",
+    "sector": "SaaS",
+    "aliases": [
+      "PeopleFlow HR Systems Ltd."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "ApexFreight",
+    "sector": "Hybrid",
+    "aliases": [
+      "Apex Freight Solutions Inc."
+    ],
+    "predecessor": {
+      "name": "FleetLink",
+      "effective_date": "2025-04-01"
+    },
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "TalentVault",
+    "sector": "SaaS",
+    "aliases": [
+      "TalentVault Inc."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "FleetLink",
+    "sector": "Marketplace",
+    "aliases": [
+      "FleetLink Logistics Network"
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  },
+  {
+    "canonical_name": "CarbonTrack",
+    "sector": "SaaS",
+    "aliases": [
+      "CarbonTrack Analytics Corp."
+    ],
+    "predecessor": null,
+    "identity_confidence": "HIGH"
+  }
+]

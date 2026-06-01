@@ -63,3 +63,50 @@ def score(records, labels) -> dict:
                     pm[0] += 1
     return {"per_metric": per_metric, "omissions": omissions, "hallucinations": hallucinations,
             "status_agreement": [status_ok, status_total], "warnings": warnings}
+
+def _labeled_present(records, labels):
+    """Yield (record, expected_value, metric) for each labeled-present cell with a matching record."""
+    for _pdf, blk in labels.items():
+        company, year = blk["company"], blk["period"]["year"]
+        qtoken = _norm_quarter(blk["period"]["quarter"])
+        for mname, lab in blk["metrics"].items():
+            if lab.get("status") != "present":
+                continue
+            try:
+                metric = MetricName(mname)
+            except ValueError:
+                continue
+            recs = records_for(records, company, year, qtoken, metric)
+            rec = recs[0] if recs else None
+            if rec and rec.value is not None:
+                yield rec, lab.get("value"), metric
+
+def verification_ablation(records, labels) -> dict:
+    mtx = {"verified": [0, 0], "unverified": [0, 0]}   # [correct, wrong]
+    for rec, expected, metric in _labeled_present(records, labels):
+        bucket = "verified" if rec.extraction_method == ExtractionMethod.TABLE_CELL else "unverified"
+        mtx[bucket][0 if _is_correct(rec.value, expected, metric) else 1] += 1
+    return mtx
+
+def confidence_calibration(records, labels) -> dict:
+    tiers = {"HIGH": [0, 0], "MEDIUM": [0, 0], "LOW": [0, 0]}   # [correct, wrong]
+    for rec, expected, metric in _labeled_present(records, labels):
+        if rec.confidence_tier is None:
+            continue
+        tiers[rec.confidence_tier.value][0 if _is_correct(rec.value, expected, metric) else 1] += 1
+    return tiers
+
+def time_series_flags(records, factor=5.0) -> list:
+    by = {}
+    for r in records:
+        if r.restated or r.value is None or r.value == 0:
+            continue
+        by.setdefault((r.company, r.metric), []).append((r.period_year, _norm_quarter(r.period_quarter), r.value))
+    flags = []
+    for (company, metric), seq in by.items():
+        seq.sort(key=lambda t: (t[0], t[1]))
+        for (_, q0, v0), (_, q1, v1) in zip(seq, seq[1:]):
+            ratio = max(abs(v0), abs(v1)) / max(min(abs(v0), abs(v1)), 1e-9)
+            if ratio >= factor:
+                flags.append((company, metric.value, f"{q0}->{q1}", round(ratio, 1)))
+    return flags

@@ -35,3 +35,29 @@ def test_score_ignores_restated_records():
     r = score(records, {"x": {"company": "NovaCloud", "sector": "SaaS", "period": {"year": 2025, "quarter": "Q2"},
                               "metrics": {"gross_margin": {"value": 78.0, "status": "present"}}}})
     assert r["per_metric"]["gross_margin"] == [1, 1]
+
+def test_verification_ablation_separates_verified():
+    from portfolio_extract.evaluation import verification_ablation
+    records = [
+        _rec("NovaCloud", "Q2", M.GROSS_MARGIN, 78.0, CanonicalUnit.PERCENT, method=ExtractionMethod.TABLE_CELL),
+        _rec("NovaCloud", "Q2", M.ARR, 99.0, CanonicalUnit.USD_MILLIONS, method=ExtractionMethod.LLM_PROSE),
+    ]
+    labels = {"x": {"company": "NovaCloud", "sector": "SaaS", "period": {"year": 2025, "quarter": "Q2"},
+        "metrics": {"gross_margin": {"value": 78.0, "status": "present"}, "arr": {"value": 34.2, "status": "present"}}}}
+    m = verification_ablation(records, labels)
+    assert m["verified"] == [1, 0] and m["unverified"] == [0, 1]
+
+def test_confidence_calibration_per_tier():
+    from portfolio_extract.evaluation import confidence_calibration
+    records = [_rec("NovaCloud", "Q2", M.GROSS_MARGIN, 78.0, CanonicalUnit.PERCENT, tier=ConfidenceTier.HIGH)]
+    labels = {"x": {"company": "NovaCloud", "sector": "SaaS", "period": {"year": 2025, "quarter": "Q2"},
+        "metrics": {"gross_margin": {"value": 78.0, "status": "present"}}}}
+    c = confidence_calibration(records, labels)
+    assert c["HIGH"] == [1, 0]
+
+def test_time_series_flags_big_jump():
+    from portfolio_extract.evaluation import time_series_flags
+    records = [_rec("NovaCloud", "Q1", M.ARR, 3.4, CanonicalUnit.USD_MILLIONS),
+               _rec("NovaCloud", "Q2", M.ARR, 34.0, CanonicalUnit.USD_MILLIONS)]
+    flags = time_series_flags(records)
+    assert any(f[0] == "NovaCloud" and f[1] == "arr" for f in flags)

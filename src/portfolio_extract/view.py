@@ -122,6 +122,7 @@ def citation_for(records, company, period, metric):
         "snippet": rec.source_snippet, "source_file": rec.source_file, "source_page": rec.source_page,
         "confidence": rec.confidence_tier.value if rec.confidence_tier else None,
         "basis": rec.basis, "extraction_method": rec.extraction_method.value,
+        "bbox": rec.bbox,
         "restated": rec.restated, "original_value": None,
     }
     if restated is not None and reported is not None:

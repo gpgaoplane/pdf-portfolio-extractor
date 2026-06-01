@@ -128,12 +128,13 @@ def test_citation_for_returns_provenance():
         basis="saas_cogs", raw_text="78%", label_as_reported="Gross Margin", source_file="NovaCloud_Q2_2025.pdf",
         source_page=1, source_snippet="Gross Margin 78%", extraction_method=ExtractionMethod.TABLE_CELL,
         confidence_tier=ConfidenceTier.HIGH, confidence_score=1.0, absence_reason=AbsenceReason.PRESENT,
-        period_basis=PeriodBasis.RATIO_LTM)
+        period_basis=PeriodBasis.RATIO_LTM, bbox=(40.0, 80.0, 300.0, 100.0))
     c = citation_for([rec], "NovaCloud", (2025, "Q2"), MetricName.GROSS_MARGIN)
     assert c is not None
     assert c["source_file"] == "NovaCloud_Q2_2025.pdf" and c["source_page"] == 1
     assert c["label_as_reported"] == "Gross Margin" and c["snippet"] == "Gross Margin 78%"
     assert c["confidence"] == "HIGH" and c["basis"] == "saas_cogs" and c["value"] == 78.0
+    assert "bbox" in c and c["bbox"] == (40.0, 80.0, 300.0, 100.0)
 
 def test_citation_for_missing_returns_none():
     from portfolio_extract.view import citation_for

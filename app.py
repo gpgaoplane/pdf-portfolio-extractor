@@ -1,4 +1,5 @@
 import json
+import os
 
 import pandas as pd
 import streamlit as st
@@ -8,6 +9,7 @@ from portfolio_extract.repository import load_records_jsonl
 from portfolio_extract.registry import load_companies_json
 from portfolio_extract.view import (comparison_frame, overview_table, citation_for,
                                      saas_comparison, time_series)
+from portfolio_extract.structural import render_page_png
 
 st.set_page_config(page_title="Portfolio Metrics Explorer", layout="wide")
 
@@ -112,6 +114,17 @@ else:
         st.caption(f"Basis: {citation['basis']}")
     if citation.get("restatement_note"):
         st.warning(f"{citation['restatement_note']} Originally reported: {citation['original_value']}.")
+
+    src_path = os.path.join("data", citation["source_file"] or "")
+    if citation["source_page"] and citation["source_file"] and os.path.exists(src_path):
+        with st.expander("Verify in source"):
+            try:
+                png = render_page_png(src_path, citation["source_page"], citation.get("bbox"))
+                cap = ("Highlighted cell is the matched value" if citation.get("bbox")
+                       else "Prose value; see snippet above (no table cell to box).")
+                st.image(png, caption=cap)
+            except Exception as exc:
+                st.caption(f"Could not render source page ({exc}).")
 
 st.divider()
 st.header("Insights")

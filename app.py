@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import streamlit as st
 from portfolio_extract.evaluation import summarize_report
-from portfolio_extract.models import MetricName
+from portfolio_extract.models import MetricName, METRIC_UNIT, CanonicalUnit
 from portfolio_extract.repository import load_records_jsonl
 from portfolio_extract.registry import load_companies_json
 from portfolio_extract.view import (comparison_frame, overview_table, citation_for,
@@ -92,7 +92,15 @@ else:
     _CONF_COLOR = {"HIGH": "#1a7f37", "MEDIUM": "#9a6700", "LOW": "#b35900"}
     sym = {"USD": "$", "GBP": "£", "EUR": "€"}.get(citation["currency"], "")
     val = citation["value"]
-    headline = f"{sym}{val:g}" if val is not None else "—"
+    unit = METRIC_UNIT[sel_metric]
+    if val is None:
+        headline = "—"
+    elif unit == CanonicalUnit.PERCENT:
+        headline = f"{val:g}%"
+    elif unit == CanonicalUnit.COUNT:
+        headline = f"{int(val)}"
+    else:
+        headline = f"{sym}{val:g}M"
 
     st.markdown(f"### {headline}")
     st.markdown(
@@ -137,7 +145,12 @@ if saas.empty:
 else:
     chart = saas.rename(columns={"arr": "ARR ($M)", "net_revenue_retention": "NRR (%)"})
     st.dataframe(chart, use_container_width=True)
-    st.bar_chart(chart)
+    # ARR ($M) and NRR (%) are on different scales; chart them separately so neither flattens the other.
+    ac, nc = st.columns(2)
+    ac.caption("ARR ($M)")
+    ac.bar_chart(saas[["arr"]].dropna(how="all").rename(columns={"arr": "ARR ($M)"}))
+    nc.caption("Net revenue retention (%)")
+    nc.bar_chart(saas[["net_revenue_retention"]].dropna(how="all").rename(columns={"net_revenue_retention": "NRR (%)"}))
     leaders = saas["arr"].dropna()
     if not leaders.empty:
         top = leaders.idxmax()

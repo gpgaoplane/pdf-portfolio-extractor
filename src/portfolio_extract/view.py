@@ -1,6 +1,7 @@
 from __future__ import annotations
+import re
 import pandas as pd
-from portfolio_extract.models import MetricName
+from portfolio_extract.models import MetricName, CanonicalUnit, METRIC_UNIT
 
 def _reconcile(df):
     if df.empty:
@@ -48,6 +49,43 @@ def comparison_frame(records):
         "source_file": r.source_file, "restated": r.restated,
     } for r in records]
     return _reconcile(pd.DataFrame(rows))
+
+_CURRENCY_SYMBOL = {"USD": "$", "GBP": "£", "EUR": "€"}
+
+def _quarter_int(q) -> int:
+    m = re.search(r"[Qq]\s*([1-4])", str(q))
+    return int(m.group(1)) if m else 0
+
+def _format_cell(value, currency, unit, reason) -> str:
+    if reason == "not_applicable":
+        return "n/a"
+    if value is None or pd.isna(value):
+        return "—"
+    if unit == CanonicalUnit.PERCENT:
+        return f"{value:g}%"
+    if unit == CanonicalUnit.COUNT:
+        return f"{int(value)}"
+    return _CURRENCY_SYMBOL.get(currency, "") + f"{value:g}M"
+
+def overview_table(frame):
+    metric_order = [m.value for m in MetricName if m.value in set(frame["metric"])]
+    rows = {}
+    for company, g in frame.groupby("company"):
+        latest = g.sort_values(["period_year", "period_quarter"],
+                               key=lambda s: s.map(_quarter_int) if s.name == "period_quarter" else s).iloc[-1:]
+        latest_key = (latest.iloc[0]["period_year"], latest.iloc[0]["period_quarter"])
+        cur = g[(g["period_year"] == latest_key[0]) & (g["period_quarter"] == latest_key[1])]
+        cells = {}
+        for metric in metric_order:
+            mrow = cur[cur["metric"] == metric]
+            if mrow.empty:
+                cells[metric] = "—"
+                continue
+            row = mrow.iloc[0]
+            cells[metric] = _format_cell(row["value"], row["currency"],
+                                         METRIC_UNIT[MetricName(metric)], row["absence_reason"])
+        rows[company] = cells
+    return pd.DataFrame.from_dict(rows, orient="index", columns=metric_order)
 
 def time_series(frame, company, metric, companies=None, include_predecessor=False):
     names = [company]

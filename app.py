@@ -44,7 +44,7 @@ auto_verified_pct = round(100 * table_verified / max(len(present_records), 1))
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Reports", len({r.source_file for r in records}))
 c2.metric("Metrics extracted", len(present_records))
-c3.metric("Auto-verified", f"{auto_verified_pct}%")
+c3.metric("Table-sourced", f"{auto_verified_pct}%", help="Share of extracted values matched to a source-table cell. Distinct from the labelled-set accuracy in Trust & quality.")
 c4.metric("Companies", frame["company"].nunique())
 
 st.divider()
@@ -121,7 +121,7 @@ else:
     if citation["basis"]:
         st.caption(f"Basis: {citation['basis']}")
     if citation.get("restatement_note"):
-        st.warning(f"{citation['restatement_note']} Originally reported: {citation['original_value']}.")
+        st.warning(citation["restatement_note"])
 
     src_path = os.path.join("data", citation["source_file"] or "")
     if citation["source_page"] and citation["source_file"] and os.path.exists(src_path):
@@ -253,7 +253,6 @@ st.caption(
     "results above stand."
 )
 try:
-    import os
     from pathlib import Path
 
     from dotenv import load_dotenv
@@ -274,11 +273,12 @@ try:
 
             from portfolio_extract.pipeline import extract_pdf
 
+            tmp_path = None
             if uploaded is not None:
-                tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
-                tmp.write(uploaded.getvalue())
-                tmp.flush()
-                target = tmp.name
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                    tmp.write(uploaded.getvalue())  # close handle so pdfplumber can reopen it (Windows)
+                    tmp_path = tmp.name
+                target = tmp_path
             else:
                 target = f"data/{choice}"
             with st.spinner("Extracting (live LLM call)..."):
@@ -290,6 +290,12 @@ try:
                         "The prebuilt results above are unaffected."
                     )
                     de = None
+                finally:
+                    if tmp_path:
+                        try:
+                            os.unlink(tmp_path)
+                        except OSError:
+                            pass
             if de is not None:
                 st.success(
                     f"Extracted {len(de.records)} records · resolved company: "

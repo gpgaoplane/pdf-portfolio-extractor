@@ -61,3 +61,17 @@ def test_time_series_flags_big_jump():
                _rec("NovaCloud", "Q2", M.ARR, 34.0, CanonicalUnit.USD_MILLIONS)]
     flags = time_series_flags(records)
     assert any(f[0] == "NovaCloud" and f[1] == "arr" for f in flags)
+
+def test_run_eval_reads_db(tmp_path):
+    from portfolio_extract.repository import SqliteRepository
+    from portfolio_extract.evaluation import run_eval
+    import yaml as _yaml
+    repo = SqliteRepository(tmp_path / "e.db"); repo.init_schema()
+    repo.save_many([_rec("NovaCloud", "Q2", M.GROSS_MARGIN, 78.0, CanonicalUnit.PERCENT)])
+    labels_path = tmp_path / "labels.yaml"
+    labels_path.write_text(_yaml.safe_dump({"x": {"company": "NovaCloud", "sector": "SaaS",
+        "period": {"year": 2025, "quarter": "Q2"}, "metrics": {"gross_margin": {"value": 78.0, "status": "present"}}}}),
+        encoding="utf-8")
+    report = run_eval(tmp_path / "e.db", labels_path)
+    assert report["score"]["per_metric"]["gross_margin"] == [1, 1]
+    assert "ablation" in report and "calibration" in report

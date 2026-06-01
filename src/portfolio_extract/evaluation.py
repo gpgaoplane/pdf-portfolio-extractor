@@ -110,3 +110,17 @@ def time_series_flags(records, factor=5.0) -> list:
             if ratio >= factor:
                 flags.append((company, metric.value, f"{q0}->{q1}", round(ratio, 1)))
     return flags
+
+def run_eval(db_path, labels_path) -> dict:
+    from portfolio_extract.repository import SqliteRepository
+    records = SqliteRepository(db_path).query()
+    labels = load_labels(labels_path)
+    return {"score": score(records, labels), "ablation": verification_ablation(records, labels),
+            "calibration": confidence_calibration(records, labels), "time_series": time_series_flags(records)}
+
+def main() -> None:
+    import sys, json
+    args = sys.argv[1:]
+    db_path = args[0] if args else "out/portfolio.db"
+    labels_path = args[1] if len(args) > 1 else "eval/labels.yaml"
+    print(json.dumps(run_eval(db_path, labels_path), indent=2, default=str))

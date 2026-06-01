@@ -72,3 +72,15 @@ def test_registry_flags_unresolved_predecessor():
         predecessor=Predecessor(name="Unknown Holdings LLC")), [])
     reg.finalize()
     assert any(r.kind == "predecessor_unresolved" for r in reg.review)
+
+def test_load_companies_json_roundtrip(tmp_path):
+    import json
+    from portfolio_extract.registry import CompanyRecord, Predecessor, load_companies_json
+    from portfolio_extract.models import Sector
+    data = [json.loads(CompanyRecord(canonical_name="ApexFreight", sector=Sector.HYBRID,
+              predecessor=Predecessor(name="FleetLink")).model_dump_json()),
+            json.loads(CompanyRecord(canonical_name="NovaCloud", sector=Sector.SAAS).model_dump_json())]
+    p = tmp_path / "c.json"; p.write_text(json.dumps(data), encoding="utf-8")
+    comps = load_companies_json(p)
+    assert comps["ApexFreight"].sector == Sector.HYBRID and comps["ApexFreight"].predecessor.name == "FleetLink"
+    assert comps["NovaCloud"].sector == Sector.SAAS

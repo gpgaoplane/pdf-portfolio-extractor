@@ -57,10 +57,30 @@ Each run prints a per-file record count and writes to `out/portfolio.db`. The re
 
 ```python
 from portfolio_extract.repository import SqliteRepository
-rows = SqliteRepository("out/portfolio.db").query(company="NovaCloud Analytics Inc.")
+rows = SqliteRepository("out/portfolio.db").query(company="NovaCloud")
 for r in rows:
     print(r.metric.value, r.value, r.canonical_unit.value, r.confidence_tier.value)
 ```
+
+## Demo dashboard
+
+A Streamlit front-end displays the extracted metrics with full traceability. It reads a committed, key-free dataset (`eval/demo_records.jsonl`), so it runs without an LLM key or a prior extraction:
+
+```bash
+.venv/Scripts/streamlit run app.py
+```
+
+It shows a portfolio overview, click-to-source citations (with the cited cell highlighted on the page image), cross-company and cross-period insights, and a quality panel. An opt-in "Live extraction" section runs the real pipeline on a selected report when an LLM key is configured.
+
+## Evaluation
+
+Accuracy is measured against a hand-labelled set transcribed from the source PDFs (`eval/labels.yaml`, plus a held-out `eval/holdout_labels.yaml`). Run the eval over an extracted database:
+
+```bash
+.venv/Scripts/portfolio-eval out/portfolio.db eval/labels.yaml
+```
+
+It reports per-metric "X of N" with visible denominators, omission versus hallucination counts, a verification ablation, and confidence calibration.
 
 ## What the output looks like
 

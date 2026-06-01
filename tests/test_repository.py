@@ -28,3 +28,18 @@ def test_company_upsert_get_list(tmp_path):
     assert got.sector == Sector.MARKETPLACE and got.predecessor.name == "FleetLink"
     repo.upsert_company(CompanyRecord(canonical_name="NovaCloud", sector=Sector.SAAS))
     assert {c.canonical_name for c in repo.list_companies()} == {"ApexFreight", "NovaCloud"}
+
+
+def test_records_jsonl_roundtrip(tmp_path):
+    from portfolio_extract.repository import export_records_jsonl, load_records_jsonl
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis)
+    rec = ExtractionRecord(company="NovaCloud", period_year=2025, period_quarter="Q2",
+        metric=MetricName.GROSS_MARGIN, value=78.0, canonical_unit=CanonicalUnit.PERCENT, currency=Currency.USD,
+        raw_text="78%", label_as_reported="Gross Margin", source_file="NovaCloud_Q2_2025.pdf", source_page=1,
+        source_snippet="Gross Margin 78%", extraction_method=ExtractionMethod.TABLE_CELL,
+        absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.RATIO_LTM, basis="saas_cogs")
+    p = tmp_path / "recs.jsonl"
+    export_records_jsonl([rec], p)
+    out = load_records_jsonl(p)
+    assert len(out) == 1 and out[0].metric == MetricName.GROSS_MARGIN and out[0].basis == "saas_cogs"

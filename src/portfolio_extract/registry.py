@@ -1,5 +1,7 @@
 from __future__ import annotations
+import json
 import re
+from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from portfolio_extract.models import Sector
@@ -108,3 +110,9 @@ class Registry:
 
     def companies(self) -> list[CompanyRecord]:
         return list(self._by_name.values())
+
+
+def load_companies_json(path) -> dict[str, CompanyRecord]:
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    recs = [CompanyRecord.model_validate(d) for d in data]
+    return {c.canonical_name: c for c in recs}

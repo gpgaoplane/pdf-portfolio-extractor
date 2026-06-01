@@ -1,0 +1,146 @@
+{
+  "dev": {
+    "score": {
+      "per_metric": {
+        "revenue_quarterly": [
+          10,
+          10
+        ],
+        "arr": [
+          6,
+          6
+        ],
+        "gross_margin": [
+          10,
+          10
+        ],
+        "net_revenue_retention": [
+          5,
+          5
+        ],
+        "logo_churn": [
+          4,
+          4
+        ],
+        "cash_balance": [
+          4,
+          4
+        ],
+        "net_burn_monthly": [
+          4,
+          4
+        ],
+        "headcount": [
+          10,
+          10
+        ],
+        "gross_revenue_retention": [
+          1,
+          1
+        ]
+      },
+      "omissions": 0,
+      "hallucinations": 0,
+      "status_agreement": [
+        100,
+        100
+      ],
+      "warnings": []
+    },
+    "ablation": {
+      "verified": [
+        52,
+        0
+      ],
+      "unverified": [
+        2,
+        0
+      ]
+    },
+    "calibration": {
+      "HIGH": [
+        52,
+        0
+      ],
+      "MEDIUM": [
+        2,
+        0
+      ],
+      "LOW": [
+        0,
+        0
+      ]
+    },
+    "time_series": []
+  },
+  "holdout": {
+    "score": {
+      "per_metric": {
+        "revenue_quarterly": [
+          4,
+          4
+        ],
+        "gross_margin": [
+          4,
+          4
+        ],
+        "headcount": [
+          4,
+          4
+        ],
+        "arr": [
+          3,
+          3
+        ],
+        "net_revenue_retention": [
+          2,
+          2
+        ],
+        "logo_churn": [
+          2,
+          2
+        ],
+        "cash_balance": [
+          1,
+          1
+        ],
+        "net_burn_monthly": [
+          1,
+          1
+        ]
+      },
+      "omissions": 0,
+      "hallucinations": 0,
+      "status_agreement": [
+        40,
+        40
+      ],
+      "warnings": []
+    },
+    "ablation": {
+      "verified": [
+        21,
+        0
+      ],
+      "unverified": [
+        0,
+        0
+      ]
+    },
+    "calibration": {
+      "HIGH": [
+        21,
+        0
+      ],
+      "MEDIUM": [
+        0,
+        0
+      ],
+      "LOW": [
+        0,
+        0
+      ]
+    },
+    "time_series": []
+  }
+}

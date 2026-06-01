@@ -76,7 +76,8 @@ def make_client():
     # (some DeepSeek/reasoning models) can switch to tool-calling without a code change.
     mode = _MODES.get(os.environ.get("LLM_MODE", "JSON").upper(), instructor.Mode.JSON)
     return instructor.from_openai(
-        OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"]),
+        OpenAI(base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"],
+               timeout=float(os.environ.get("LLM_TIMEOUT", "60"))),
         mode=mode)
 
 def extract_with_llm(page_texts: list[str]) -> LLMExtraction:

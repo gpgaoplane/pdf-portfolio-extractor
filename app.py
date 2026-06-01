@@ -218,3 +218,76 @@ for split in ("dev", "holdout"):
         st.dataframe(cal_df, use_container_width=True, hide_index=True)
 
     st.write("")
+
+
+st.divider()
+st.header("Live extraction")
+st.caption(
+    "Run the real pipeline on a report. Needs an LLM key in .env; otherwise the prebuilt "
+    "results above stand."
+)
+try:
+    import os
+    from pathlib import Path
+
+    from dotenv import load_dotenv
+
+    pdfs = sorted(p.name for p in Path("data").glob("*.pdf"))
+    default_idx = pdfs.index("NovaCloud_Q2_2025.pdf") if "NovaCloud_Q2_2025.pdf" in pdfs else 0
+    choice = st.selectbox("Report", pdfs, index=default_idx)
+    uploaded = st.file_uploader("...or upload a PDF", type="pdf")
+    if st.button("Extract"):
+        load_dotenv()
+        if not (os.environ.get("LLM_BASE_URL") and os.environ.get("LLM_API_KEY")):
+            st.info(
+                "Configure .env with an LLM key (LLM_BASE_URL, LLM_API_KEY) to run live. "
+                "The prebuilt results above are unaffected."
+            )
+        else:
+            import tempfile
+
+            from portfolio_extract.pipeline import extract_pdf
+
+            if uploaded is not None:
+                tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+                tmp.write(uploaded.getvalue())
+                tmp.flush()
+                target = tmp.name
+            else:
+                target = f"data/{choice}"
+            with st.spinner("Extracting (live LLM call)..."):
+                try:
+                    de = extract_pdf(target)
+                except Exception as e:
+                    st.error(
+                        f"Live extraction failed ({type(e).__name__}: {e}). "
+                        "The prebuilt results above are unaffected."
+                    )
+                    de = None
+            if de is not None:
+                st.success(
+                    f"Extracted {len(de.records)} records · resolved company: "
+                    f"{de.company.canonical_name} ({de.company.sector.value})"
+                )
+                rows = [
+                    {
+                        "metric": r.metric.value,
+                        "value": r.value,
+                        "label": r.label_as_reported,
+                        "page": r.source_page,
+                        "confidence": r.confidence_tier.value if r.confidence_tier else None,
+                        "status": r.absence_reason.value,
+                    }
+                    for r in de.records
+                    if not r.restated
+                ]
+                st.dataframe(pd.DataFrame(rows), use_container_width=True)
+                if de.review:
+                    st.caption(
+                        "Review-queue items: " + "; ".join(f"{i.kind}" for i in de.review)
+                    )
+except Exception as e:
+    st.warning(
+        f"Live-extraction panel unavailable ({type(e).__name__}). "
+        "The rest of the dashboard is unaffected."
+    )

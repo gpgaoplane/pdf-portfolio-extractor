@@ -56,3 +56,13 @@ def test_pipeline_appends_restatement_record(monkeypatch, data_dir):
     assert restated[0].basis == "saas_recognized"
     cur = [r for r in de.records if r.metric.value == "revenue_quarterly" and not r.restated and r.period_quarter == "Q2"]
     assert len(cur) == 1
+
+def test_pipeline_present_record_has_real_confidence_score(monkeypatch, data_dir):
+    fake = LLMExtraction(company_name="NovaCloud Analytics Inc.", sector="SaaS", period_year=2025,
+        period_quarter="Q2", currency="USD", metrics=[
+            LLMMetric(metric="gross_margin", raw_text="78%", label_as_reported="Gross Margin",
+                      source_page=1, source_snippet="Gross Margin 78%")])
+    monkeypatch.setattr("portfolio_extract.pipeline.extract_with_llm", lambda texts: fake)
+    de = extract_pdf(data_dir / "NovaCloud_Q2_2025.pdf")
+    gm = next(r for r in de.records if r.metric == MetricName.GROSS_MARGIN)
+    assert gm.confidence_score is not None and gm.confidence_score > 0.6

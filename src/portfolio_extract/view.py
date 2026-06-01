@@ -27,6 +27,21 @@ def _reconcile(df):
         out.append(row)
     return pd.DataFrame(out)
 
+_BASIS_GROUP = {"net_interest_spread": "lending", "saas_cogs": "saas_marketplace",
+                "marketplace_contribution": "saas_marketplace"}
+_BASIS_VARIANCE = {MetricName.GROSS_MARGIN, MetricName.REVENUE_QUARTERLY}
+
+def _pivot(sub):
+    return sub.pivot_table(index="company", columns=["period_year", "period_quarter"],
+                           values="value", aggfunc="first")
+
+def metric_matrix(frame, metric):
+    sub = frame[frame["metric"] == metric.value]
+    if metric in _BASIS_VARIANCE:
+        return {grp: _pivot(g) for grp, g in
+                sub.groupby(sub["basis"].map(lambda b: _BASIS_GROUP.get(b, "unknown")))}
+    return {"all": _pivot(sub)}
+
 def comparison_frame(records, registry=None):
     rows = [{
         "company": r.company, "period_year": r.period_year, "period_quarter": r.period_quarter,

@@ -42,3 +42,18 @@ def test_reconcile_prefers_restated_keeps_original():
     assert len(row) == 1
     assert row.iloc[0]["value"] == 4.6 and row.iloc[0]["original_value"] == 4.7
     assert row.iloc[0]["origin"] == "restated"
+
+def test_metric_matrix_gates_lending_gm_separately():
+    from portfolio_extract.view import comparison_frame, metric_matrix
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis)
+    def gm(company, basis):
+        return ExtractionRecord(company=company, period_year=2025, period_quarter="Q2",
+            metric=MetricName.GROSS_MARGIN, value=60.0, canonical_unit=CanonicalUnit.PERCENT, currency=Currency.USD,
+            basis=basis, raw_text="60%", label_as_reported="Gross Margin", source_file=f"{company}_Q2_2025.pdf",
+            source_page=1, source_snippet="x", extraction_method=ExtractionMethod.TABLE_CELL,
+            absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.RATIO_LTM)
+    df = comparison_frame([gm("NovaCloud", "saas_cogs"), gm("LendBridge", "net_interest_spread")])
+    groups = metric_matrix(df, MetricName.GROSS_MARGIN)
+    assert set(groups) == {"saas_marketplace", "lending"}
+    assert "LendBridge" in groups["lending"].index and "NovaCloud" in groups["saas_marketplace"].index

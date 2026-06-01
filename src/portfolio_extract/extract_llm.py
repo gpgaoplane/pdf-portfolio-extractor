@@ -60,6 +60,8 @@ _SYSTEM = (
     "For revenue, if the report shows a total plus components (e.g. transaction plus SaaS fees), return revenue_quarterly as the "
     "TOTAL recognized revenue and list the breakdown in revenue_components (label, value, raw_text); if only components are shown, return their sum. "
     "Only return a metric that actually appears in the text; never invent a value. "
+    "Classify the company's sector as one of SaaS, Marketplace, Lending, or Hybrid; use Hybrid when the company reports BOTH "
+    "marketplace or transaction revenue AND recurring subscription/SaaS revenue (e.g. a marketplace that also charges SaaS tool fees). "
     "If the report states it is a rebrand of or successor to a prior entity (often in a footnote), set predecessor_name to that "
     "prior company's name and predecessor_effective_date (YYYY-MM-DD) if given; otherwise leave both null.")
 

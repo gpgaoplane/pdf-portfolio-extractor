@@ -100,6 +100,25 @@ def test_time_series_stitches_predecessor():
     ts_solo = time_series(df, "ApexFreight", MetricName.REVENUE_QUARTERLY, companies=companies, include_predecessor=False)
     assert set(ts_solo["company"]) == {"ApexFreight"}
 
+def test_saas_comparison_filters_by_sector():
+    from portfolio_extract.view import comparison_frame, saas_comparison
+    from portfolio_extract.registry import CompanyRecord
+    from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
+        ExtractionMethod, AbsenceReason, PeriodBasis, Sector)
+    def r(company, metric, value):
+        unit = CanonicalUnit.USD_MILLIONS if metric == MetricName.ARR else CanonicalUnit.PERCENT
+        return ExtractionRecord(company=company, period_year=2025, period_quarter="Q2", metric=metric, value=value,
+            canonical_unit=unit, currency=Currency.USD, raw_text="x", label_as_reported="x", source_file="f.pdf",
+            source_page=1, source_snippet="x", extraction_method=ExtractionMethod.TABLE_CELL,
+            absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.POINT_IN_TIME_EOP)
+    frame = comparison_frame([r("NovaCloud", MetricName.ARR, 34.2), r("NovaCloud", MetricName.NET_REVENUE_RETENTION, 123.0),
+                              r("LendBridge", MetricName.ARR, 99.0)])  # LendBridge is Lending; must be excluded
+    companies = {"NovaCloud": CompanyRecord(canonical_name="NovaCloud", sector=Sector.SAAS),
+                 "LendBridge": CompanyRecord(canonical_name="LendBridge", sector=Sector.LENDING)}
+    out = saas_comparison(frame, companies)   # pandas DataFrame indexed by company, columns arr/net_revenue_retention
+    assert "NovaCloud" in out.index and "LendBridge" not in out.index
+    assert out.loc["NovaCloud", "arr"] == 34.2 and out.loc["NovaCloud", "net_revenue_retention"] == 123.0
+
 def test_citation_for_returns_provenance():
     from portfolio_extract.view import citation_for
     from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,

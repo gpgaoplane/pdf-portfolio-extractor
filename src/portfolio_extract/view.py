@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
 import pandas as pd
-from portfolio_extract.models import MetricName, CanonicalUnit, METRIC_UNIT
+from portfolio_extract.models import MetricName, CanonicalUnit, METRIC_UNIT, Sector
 from portfolio_extract.evaluation import _norm_quarter
 
 def _reconcile(df):
@@ -87,6 +87,25 @@ def overview_table(frame):
                                          METRIC_UNIT[MetricName(metric)], row["absence_reason"])
         rows[company] = cells
     return pd.DataFrame.from_dict(rows, orient="index", columns=metric_order)
+
+def saas_comparison(frame, companies):
+    saas_names = [n for n, c in companies.items() if c.sector == Sector.SAAS]
+    cols = [MetricName.ARR.value, MetricName.NET_REVENUE_RETENTION.value]
+    rows = {}
+    for company in saas_names:
+        g = frame[frame["company"] == company]
+        if g.empty:
+            continue
+        latest = g.sort_values(["period_year", "period_quarter"],
+                               key=lambda s: s.map(_quarter_int) if s.name == "period_quarter" else s).iloc[-1:]
+        latest_key = (latest.iloc[0]["period_year"], latest.iloc[0]["period_quarter"])
+        cur = g[(g["period_year"] == latest_key[0]) & (g["period_quarter"] == latest_key[1])]
+        cells = {}
+        for metric in cols:
+            mrow = cur[(cur["metric"] == metric) & (cur["absence_reason"] == "present")]
+            cells[metric] = mrow.iloc[0]["value"] if not mrow.empty else float("nan")
+        rows[company] = cells
+    return pd.DataFrame.from_dict(rows, orient="index", columns=cols)
 
 def citation_for(records, company, period, metric):
     year, qtoken = period[0], _norm_quarter(period[1])

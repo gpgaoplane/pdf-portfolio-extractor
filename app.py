@@ -1,7 +1,9 @@
 import streamlit as st
 from portfolio_extract.models import MetricName
 from portfolio_extract.repository import load_records_jsonl
-from portfolio_extract.view import comparison_frame, overview_table, citation_for
+from portfolio_extract.registry import load_companies_json
+from portfolio_extract.view import (comparison_frame, overview_table, citation_for,
+                                     saas_comparison, time_series)
 
 st.set_page_config(page_title="Portfolio Metrics Explorer", layout="wide")
 
@@ -11,8 +13,14 @@ def _load():
     return load_records_jsonl("eval/demo_records.jsonl")
 
 
+@st.cache_data
+def _load_companies():
+    return load_companies_json("eval/demo_companies.json")
+
+
 records = _load()
 frame = comparison_frame(records)
+companies = _load_companies()
 
 st.title("Portfolio Metrics Explorer")
 st.caption("Comparable metrics extracted from portfolio-company PDF reports, with provenance.")
@@ -94,3 +102,49 @@ else:
         st.caption(f"Basis: {citation['basis']}")
     if citation.get("restatement_note"):
         st.warning(f"{citation['restatement_note']} Originally reported: {citation['original_value']}.")
+
+st.divider()
+st.header("Insights")
+
+st.subheader("How are the SaaS companies growing and retaining?")
+st.caption("ARR ($M) and net revenue retention (%) for SaaS companies, latest reported period.")
+saas = saas_comparison(frame, companies)
+if saas.empty:
+    st.info("No SaaS companies with ARR or retention in the current data.")
+else:
+    chart = saas.rename(columns={"arr": "ARR ($M)", "net_revenue_retention": "NRR (%)"})
+    st.dataframe(chart, use_container_width=True)
+    st.bar_chart(chart)
+    leaders = saas["arr"].dropna()
+    if not leaders.empty:
+        top = leaders.idxmax()
+        st.markdown(
+            f"{top} leads on ARR at ${leaders.max():g}M; retention above 100% across these "
+            f"companies means existing customers are expanding faster than they churn."
+        )
+
+st.write("")
+st.subheader("How is a company tracking over time?")
+st.caption("Pick a company and metric to see the trajectory across reported periods.")
+
+ts_companies = sorted(frame["company"].unique())
+_default_ts = ts_companies.index("ApexFreight") if "ApexFreight" in ts_companies else 0
+ic1, ic2 = st.columns(2)
+ts_company = ic1.selectbox("Company", ts_companies, index=_default_ts, key="ts_company")
+
+ts_metric_values = [m.value for m in MetricName if m.value in set(frame["metric"])]
+ts_metric_value = ic2.selectbox("Metric", ts_metric_values, key="ts_metric",
+                                format_func=lambda v: v.replace("_", " ").title())
+ts_metric = _METRIC_BY_VALUE[ts_metric_value]
+
+ts = time_series(frame, ts_company, ts_metric, companies=companies, include_predecessor=True)
+ts = ts[ts["absence_reason"] == "present"]
+if ts.empty:
+    st.info("No reported values for this company and metric.")
+else:
+    ts = ts.copy()
+    ts["period"] = [f"{y} {q}" for y, q in zip(ts["period_year"], ts["period_quarter"])]
+    st.line_chart(ts.set_index("period")["value"])
+    pred = companies[ts_company].predecessor if ts_company in companies else None
+    if pred and pred.name in set(ts["company"]):
+        st.caption(f"Includes {pred.name} before the rename to {ts_company}.")

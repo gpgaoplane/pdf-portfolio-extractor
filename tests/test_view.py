@@ -1,7 +1,5 @@
 from portfolio_extract.models import (ExtractionRecord, MetricName, CanonicalUnit, Currency,
     ExtractionMethod, ConfidenceTier, AbsenceReason, PeriodBasis)
-from portfolio_extract.view import company_period_matrix
-
 def _r(company, value):
     return ExtractionRecord(company=company, period_year=2025, period_quarter="Q2",
         metric=MetricName.REVENUE_QUARTERLY, value=value, canonical_unit=CanonicalUnit.USD_MILLIONS,
@@ -10,9 +8,12 @@ def _r(company, value):
         confidence_tier=ConfidenceTier.HIGH, confidence_score=0.95,
         absence_reason=AbsenceReason.PRESENT, period_basis=PeriodBasis.FLOW_QUARTERLY)
 
-def test_matrix_groups_by_company_period():
-    m = company_period_matrix([_r("NovaCloud", 8.4), _r("MediSight", 6.8)], MetricName.REVENUE_QUARTERLY)
-    assert m[("NovaCloud", 2025, "Q2")] == 8.4 and m[("MediSight", 2025, "Q2")] == 6.8
+def test_metric_matrix_revenue_single_block():
+    from portfolio_extract.view import comparison_frame, metric_matrix
+    df = comparison_frame([_r("NovaCloud", 8.4), _r("LendBridge", 12.1)])
+    groups = metric_matrix(df, MetricName.REVENUE_QUARTERLY)
+    assert set(groups) == {"all"}            # revenue is comparable top-line, not basis-gated
+    assert {"NovaCloud", "LendBridge"} <= set(groups["all"].index)
 
 def test_comparison_frame_long_format():
     from portfolio_extract.view import comparison_frame

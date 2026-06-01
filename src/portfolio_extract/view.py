@@ -1,12 +1,6 @@
 from __future__ import annotations
 import pandas as pd
-from portfolio_extract.models import ExtractionRecord, MetricName
-
-def company_period_matrix(records: list[ExtractionRecord], metric: MetricName
-                          ) -> dict[tuple[str, int, str], float | None]:
-    """Minimal comparable view. Reconciliation, cross-basis gating, currency = Plan 2."""
-    return {(r.company, r.period_year, r.period_quarter): r.value
-            for r in records if r.metric == metric}
+from portfolio_extract.models import MetricName
 
 def _reconcile(df):
     if df.empty:
@@ -17,7 +11,7 @@ def _reconcile(df):
         restated = g[g["restated"] == True]
         asrep = g[g["restated"] == False]
         if not restated.empty:
-            row = restated.iloc[-1].to_dict()                 # latest disclosing wins (tiebreak)
+            row = restated.iloc[-1].to_dict()                 # on multiple restatements, last in frame order wins
             row["original_value"] = asrep.iloc[0]["value"] if not asrep.empty else None
             row["origin"] = "restated" if not asrep.empty else "restatement_only"
         else:
@@ -29,7 +23,10 @@ def _reconcile(df):
 
 _BASIS_GROUP = {"net_interest_spread": "lending", "saas_cogs": "saas_marketplace",
                 "marketplace_contribution": "saas_marketplace"}
-_BASIS_VARIANCE = {MetricName.GROSS_MARGIN, MetricName.REVENUE_QUARTERLY}
+# Only gross margin gates by basis (lending GM is a net-interest-spread construct, not comparable
+# with SaaS/marketplace GM). Revenue is the comparable top-line across business models; its basis
+# is disclosure, not a comparison gate, so revenue is a single block.
+_BASIS_VARIANCE = {MetricName.GROSS_MARGIN}
 
 def _pivot(sub):
     return sub.pivot_table(index="company", columns=["period_year", "period_quarter"],
@@ -42,7 +39,7 @@ def metric_matrix(frame, metric):
                 sub.groupby(sub["basis"].map(lambda b: _BASIS_GROUP.get(b, "unknown")))}
     return {"all": _pivot(sub)}
 
-def comparison_frame(records, registry=None):
+def comparison_frame(records):
     rows = [{
         "company": r.company, "period_year": r.period_year, "period_quarter": r.period_quarter,
         "metric": r.metric.value, "value": r.value, "currency": r.currency.value, "basis": r.basis,

@@ -3,12 +3,12 @@ import os
 
 import pandas as pd
 import streamlit as st
-from portfolio_extract.evaluation import summarize_report
+from portfolio_extract.evaluation import summarize_report, _norm_quarter
 from portfolio_extract.models import MetricName, METRIC_UNIT, CanonicalUnit
 from portfolio_extract.repository import load_records_jsonl
 from portfolio_extract.registry import load_companies_json
 from portfolio_extract.view import (comparison_frame, overview_table, citation_for,
-                                     saas_comparison, time_series)
+                                     saas_comparison, time_series, _quarter_int)
 from portfolio_extract.structural import render_page_png
 
 st.set_page_config(page_title="Portfolio Metrics Explorer", layout="wide")
@@ -30,9 +30,24 @@ def _load_eval_report():
         return json.load(f)
 
 
-records = _load()
+if "live_records" not in st.session_state:
+    st.session_state.live_records = []
+if "live_companies" not in st.session_state:
+    st.session_state.live_companies = {}
+
+
+def _cell_key(r):
+    return (r.company, r.period_year, _norm_quarter(str(r.period_quarter)), r.metric)
+
+
+live = st.session_state.live_records
+_live_keys = {_cell_key(r) for r in live}
+records = [r for r in _load() if _cell_key(r) not in _live_keys] + live
 frame = comparison_frame(records)
-companies = _load_companies()
+companies = {**_load_companies(), **st.session_state.live_companies}
+
+live_source_files = {r.source_file for r in live}
+live_company_periods = {(r.company, r.period_year, str(r.period_quarter)) for r in live}
 
 st.title("Portfolio Metrics Explorer")
 st.caption("Comparable metrics extracted from portfolio-company PDF reports, with provenance.")
@@ -47,9 +62,42 @@ c2.metric("Metrics extracted", len(present_records))
 c3.metric("Table-sourced", f"{auto_verified_pct}%", help="Share of extracted values matched to a source-table cell. Distinct from the labelled-set accuracy in Trust & quality.")
 c4.metric("Companies", frame["company"].nunique())
 
+if live:
+    periods_shown = sorted({f"{r.company} {r.period_year} {r.period_quarter}" for r in live})
+    n_live_present = sum(1 for r in live if r.value is not None and not r.restated)
+    st.info(
+        f"Live this session: {', '.join(periods_shown)}. {n_live_present} metric values added "
+        "to the matrix below. Source-verified (Layer 1); not checked against ground truth (Layer 2)."
+    )
+    if st.button("Clear live additions"):
+        st.session_state.live_records = []
+        st.session_state.live_companies = {}
+        st.session_state.pop("last_extract", None)
+        st.rerun()
+
 st.divider()
 st.header("Portfolio overview")
-st.dataframe(overview_table(frame), use_container_width=True)
+
+
+def _latest_period(company):
+    g = frame[frame["company"] == company]
+    last = g.sort_values(
+        ["period_year", "period_quarter"],
+        key=lambda s: s.map(_quarter_int) if s.name == "period_quarter" else s,
+    ).iloc[-1]
+    return (company, last["period_year"], str(last["period_quarter"]))
+
+
+_overview = overview_table(frame)
+_live_shown = [c for c in _overview.index if _latest_period(c) in live_company_periods]
+if _live_shown:
+    _overview = _overview.rename(index={c: f"{c} · live (Layer 2 unverified)" for c in _live_shown})
+st.dataframe(_overview, use_container_width=True)
+if _live_shown:
+    st.caption(
+        "Rows tagged “live (Layer 2 unverified)” were extracted this session; they carry "
+        "source verification but no ground-truth check."
+    )
 
 st.divider()
 st.header("Trace a number to its source")
@@ -116,6 +164,12 @@ else:
         st.markdown(
             f"<span style='background:{color};color:white;padding:2px 8px;"
             f"border-radius:10px;font-size:0.8em'>Confidence: {conf}</span>",
+            unsafe_allow_html=True,
+        )
+    if citation["source_file"] in live_source_files:
+        st.markdown(
+            "<span style='background:#8a5a00;color:white;padding:2px 8px;"
+            "border-radius:10px;font-size:0.8em'>Live · Layer 2: unverified</span>",
             unsafe_allow_html=True,
         )
     if citation["basis"]:
@@ -297,27 +351,43 @@ try:
                         except OSError:
                             pass
             if de is not None:
-                st.success(
-                    f"Extracted {len(de.records)} records · resolved company: "
-                    f"{de.company.canonical_name} ({de.company.sector.value})"
-                )
-                rows = [
-                    {
-                        "metric": r.metric.value,
-                        "value": r.value,
-                        "label": r.label_as_reported,
-                        "page": r.source_page,
-                        "confidence": r.confidence_tier.value if r.confidence_tier else None,
-                        "status": r.absence_reason.value,
-                    }
-                    for r in de.records
-                    if not r.restated
-                ]
-                st.dataframe(pd.DataFrame(rows), use_container_width=True)
-                if de.review:
-                    st.caption(
-                        "Review-queue items: " + "; ".join(f"{i.kind}" for i in de.review)
-                    )
+                new_keys = {_cell_key(r) for r in de.records}
+                st.session_state.live_records = [
+                    r for r in st.session_state.live_records
+                    if _cell_key(r) not in new_keys
+                ] + list(de.records)
+                st.session_state.live_companies[de.company.canonical_name] = de.company
+                st.session_state.last_extract = {
+                    "company": de.company.canonical_name,
+                    "sector": de.company.sector.value,
+                    "n_present": sum(1 for r in de.records
+                                     if r.value is not None and not r.restated),
+                    "rows": [
+                        {
+                            "metric": r.metric.value,
+                            "value": r.value,
+                            "label": r.label_as_reported,
+                            "page": r.source_page,
+                            "confidence": r.confidence_tier.value if r.confidence_tier else None,
+                            "status": r.absence_reason.value,
+                        }
+                        for r in de.records
+                        if not r.restated
+                    ],
+                    "review": [i.kind for i in de.review],
+                }
+                st.rerun()
+
+    last_extract = st.session_state.get("last_extract")
+    if last_extract:
+        st.success(
+            f"Joined the matrix above: {last_extract['company']} "
+            f"({last_extract['sector']}), {last_extract['n_present']} metric values. "
+            "Source-verified (Layer 1); ground-truth unverified (Layer 2)."
+        )
+        st.dataframe(pd.DataFrame(last_extract["rows"]), use_container_width=True)
+        if last_extract["review"]:
+            st.caption("Review-queue items: " + "; ".join(last_extract["review"]))
 except Exception as e:
     st.warning(
         f"Live-extraction panel unavailable ({type(e).__name__}). "
